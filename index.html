@@ -430,7 +430,7 @@
 
                 <div class="control-group">
                     <label for="fileInput" class="file-label">📁 导入Excel文件</label>
-                    <input type="file" id="fileInput" class="file-input" accept=".xlsx,.xls">
+                    <input type="file" id="fileInput" class="file-input" accept=".xlsx,.xls,.csv">
                     <span id="fileName" style="color: #6c757d; font-size: 14px;">未选择文件</span>
                 </div>
 
@@ -1173,16 +1173,23 @@
 
         function exportUnknown() {
             const unknownWords = allWords.filter(w => wordStatus[w.id] === 'unknown');
-            if (!unknownWords.length) return alert('没有未掌握的词汇！');
-            let csv = "序号,中文,英文,分类\n";
-            unknownWords.forEach(w => csv +=
-                `${allWords.findIndex(aw=>aw.id===w.id)+1},"${w.chinese}","${w.english}","${w.category}"\n`);
-            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `未掌握词汇_${new Date().toISOString().slice(0,10)}.csv`;
-            a.click();
-        }
+                if (!unknownWords.length) return alert('没有未掌握的词汇！');
+
+                // 第一行：导出时间（单独一个字段，避免影响表头对齐）
+                let csv = `"导出时间：${new Date().toLocaleString()}"\n`;
+                // 第二行：表头
+                csv += "序号,中文,英文,分类\n";
+
+                unknownWords.forEach(w => {
+                    csv += `${allWords.findIndex(aw=>aw.id===w.id)+1},"${w.chinese}","${w.english}","${w.category}"\n`;
+                });
+
+                const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `未掌握词汇_${new Date().toISOString().slice(0,10)}.csv`;
+                a.click();
+            }
 
         function jumpToFirstUnknown() {
             const idx = allWords.findIndex(w => !wordStatus[w.id]);
