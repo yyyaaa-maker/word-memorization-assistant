@@ -560,6 +560,12 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
 
+        // 设置持久化为 LOCAL，确保登录状态在浏览器关闭后依然保留
+        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+          .catch((error) => {
+            console.error('持久化设置失败:', error);
+          });
+
         // ==================== GitHub 配置 ====================
         const GITHUB_OWNER = 'yyyaaa-maker';
         const GITHUB_REPO = 'word-memorization-assistant';
