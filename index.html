@@ -4,362 +4,131 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>医学词汇背词工具</title>
+    <!-- Firebase SDK (仅Auth，无需Firestore) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
     <style>
-
-        * {
-
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
+            min-height: 100vh; padding: 20px;
         }
-        
         .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
+            max-width: 800px; margin: 0 auto;
+            background: white; border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1); overflow: hidden;
         }
-        
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
+            color: white; padding: 30px; text-align: center;
         }
-        
-        .header h1 {
-            font-size: 28px;
-            margin-bottom: 10px;
-        }
-        
+        .header h1 { font-size: 28px; margin-bottom: 10px; }
         .controls {
-            padding: 20px;
-            background: #f8f9fa;
+            padding: 20px; background: #f8f9fa;
             border-bottom: 1px solid #e9ecef;
         }
-        
         .control-group {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
+            display: flex; align-items: center; gap: 15px;
+            margin-bottom: 15px; flex-wrap: wrap;
         }
-        
         .swipe-hint {
-            font-size: 12px;
-            color: #6c757d;
-            margin-left: 10px;
+            font-size: 12px; color: #6c757d; margin-left: 10px;
             display: none;
         }
-        
-        @media (max-width: 768px) {
-            .swipe-hint {
-                display: inline-block;
-            }
-        }
-        
-        .control-group label {
-            font-weight: 600;
-            color: #495057;
-            min-width: 80px;
-        }
-        
+        @media (max-width: 768px) { .swipe-hint { display: inline-block; } }
+        .control-group label { font-weight: 600; color: #495057; min-width: 80px; }
         .control-group input, .control-group select {
-            padding: 8px 12px;
-            border: 2px solid #dee2e6;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s;
+            padding: 8px 12px; border: 2px solid #dee2e6;
+            border-radius: 8px; font-size: 14px; transition: border-color 0.3s;
         }
-        
         .control-group input:focus, .control-group select:focus {
-            outline: none;
-            border-color: #667eea;
+            outline: none; border-color: #667eea;
         }
-        
         .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-decoration: none;
-            display: inline-block;
+            padding: 10px 20px; border: none; border-radius: 8px;
+            font-size: 14px; font-weight: 600; cursor: pointer;
+            transition: all 0.3s; text-decoration: none; display: inline-block;
         }
-        
-        .btn-primary {
-            background: #667eea;
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            background: #5a6fd8;
-            transform: translateY(-1px);
-        }
-        
-        .btn-danger {
-            background: #dc3545;
-            color: white;
-        }
-        
-        .btn-danger:hover {
-            background: #c82333;
-        }
-        
-        .btn-success {
-            background: #28a745;
-            color: white;
-        }
-        
-        .btn-success:hover {
-            background: #218838;
-        }
-        
-        .btn-info {
-            background: #17a2b8;
-            color: white;
-        }
-        
-        .btn-info:hover {
-            background: #138496;
-        }
-        
-        .btn-warning {
-            background: #ffc107;
-            color: #212529;
-        }
-        
-        .btn-warning:hover {
-            background: #e0a800;
-        }
-        
-        .tabs {
-            display: flex;
-            background: #f8f9fa;
-            border-bottom: 1px solid #e9ecef;
-        }
-        
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5a6fd8; transform: translateY(-1px); }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { background: #218838; }
+        .btn-info { background: #17a2b8; color: white; }
+        .btn-info:hover { background: #138496; }
+        .btn-warning { background: #ffc107; color: #212529; }
+        .btn-warning:hover { background: #e0a800; }
+        .tabs { display: flex; background: #f8f9fa; border-bottom: 1px solid #e9ecef; }
         .tab {
-            padding: 15px 25px;
-            cursor: pointer;
-            font-weight: 600;
-            color: #6c757d;
-            border-bottom: 3px solid transparent;
-            transition: all 0.3s;
+            padding: 15px 25px; cursor: pointer; font-weight: 600;
+            color: #6c757d; border-bottom: 3px solid transparent; transition: all 0.3s;
         }
-        
-        .tab.active {
-            color: #667eea;
-            border-bottom-color: #667eea;
-            background: white;
-        }
-        
-        .tab-content {
-            display: none;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
+        .tab.active { color: #667eea; border-bottom-color: #667eea; background: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
         .word-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 15px;
-            padding: 20px;
-            touch-action: pan-y;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px; padding: 20px; touch-action: pan-y;
         }
-        
         .word-card {
-            background: white;
-            border: 2px solid #e9ecef;
-            border-radius: 12px;
-            padding: 20px;
-            transition: all 0.3s;
-            cursor: pointer;
-            position: relative;
+            background: white; border: 2px solid #e9ecef; border-radius: 12px;
+            padding: 20px; transition: all 0.3s; cursor: pointer; position: relative;
         }
-        
-        .word-card:hover {
-            border-color: #667eea;
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
-        }
-        
-        .word-card.known {
-            background: #d4edda;
-            border-color: #28a745;
-        }
-        
-        .word-card.unknown {
-            background: #f8d7da;
-            border-color: #dc3545;
-        }
-        
-        .word-card.current {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
-        }
-        
-        .word-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 10px;
-        }
-        
+        .word-card:hover { border-color: #667eea; box-shadow: 0 5px 15px rgba(102,126,234,0.2); }
+        .word-card.known { background: #d4edda; border-color: #28a745; }
+        .word-card.unknown { background: #f8d7da; border-color: #dc3545; }
+        .word-card.current { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.2); }
+        .word-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
         .word-number {
-            background: #667eea;
-            color: white;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: bold;
+            background: #667eea; color: white; width: 30px; height: 30px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: bold;
         }
-        
-        .word-actions {
-            display: flex;
-            gap: 5px;
-        }
-        
+        .word-actions { display: flex; gap: 5px; }
         .icon-btn {
-            width: 30px;
-            height: 30px;
-            border: none;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            transition: all 0.3s;
+            width: 30px; height: 30px; border: none; border-radius: 50%;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 14px; transition: all 0.3s;
         }
-        
-        .icon-btn.known {
-            background: #28a745;
-            color: white;
-        }
-        
-        .icon-btn.unknown {
-            background: #dc3545;
-            color: white;
-        }
-        
-        .word-content h3 {
-            color: #343a40;
-            margin-bottom: 8px;
-            font-size: 18px;
-        }
-        
-        .word-content p {
-            color: #6c757d;
-            margin-bottom: 5px;
-            font-size: 14px;
-        }
-        
-        .word-content .english {
-            font-style: italic;
-            color: #667eea;
-            font-weight: 600;
-        }
-        
+        .icon-btn.known { background: #28a745; color: white; }
+        .icon-btn.unknown { background: #dc3545; color: white; }
+        .word-content h3 { color: #343a40; margin-bottom: 8px; font-size: 18px; }
+        .word-content p { color: #6c757d; margin-bottom: 5px; font-size: 14px; }
+        .word-content .english { font-style: italic; color: #667eea; font-weight: 600; }
         .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 5px;
-            padding: 15px;
-            background: #f8f9fa;
-            flex-wrap: wrap;
+            display: flex; justify-content: center; align-items: center;
+            gap: 5px; padding: 15px; background: #f8f9fa; flex-wrap: wrap;
         }
-        
-        .pagination .btn {
-            font-size: 12px;
-            padding: 8px 12px;
-            margin: 2px;
-        }
-        
-        .pagination input {
-            width: 50px;
-            margin: 0 3px;
-        }
-        
-        .pagination .page-info {
-            font-size: 12px;
-            margin: 0 5px;
-        }
-        
-        .page-info {
-            color: #6c757d;
-            font-size: 14px;
-        }
-        
+        .pagination .btn { font-size: 12px; padding: 8px 12px; margin: 2px; }
+        .pagination input { width: 50px; margin: 0 3px; }
+        .pagination .page-info { font-size: 12px; margin: 0 5px; }
+        .page-info { color: #6c757d; font-size: 14px; }
         .stats {
-            background: #e3f2fd;
-            padding: 15px 20px;
-            border-bottom: 1px solid #e9ecef;
-            display: flex;
-            justify-content: space-around;
-            text-align: center;
+            background: #e3f2fd; padding: 15px 20px; border-bottom: 1px solid #e9ecef;
+            display: flex; justify-content: space-around; text-align: center;
         }
-        
-        .stat-item h4 {
-            color: #1976d2;
-            font-size: 24px;
-            margin-bottom: 5px;
-        }
-        
-        .stat-item p {
-            color: #6c757d;
-            font-size: 12px;
-        }
-        
-        .file-input {
-            display: none;
-        }
-        
+        .stat-item h4 { color: #1976d2; font-size: 24px; margin-bottom: 5px; }
+        .stat-item p { color: #6c757d; font-size: 12px; }
+        .file-input { display: none; }
         .file-label {
-            display: inline-block;
-            padding: 10px 20px;
-            background: #28a745;
-            color: white;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background 0.3s;
+            display: inline-block; padding: 10px 20px; background: #28a745;
+            color: white; border-radius: 8px; cursor: pointer; transition: background 0.3s;
         }
-        
-        .file-label:hover {
-            background: #218838;
-        }
-        
+        .file-label:hover { background: #218838; }
         @media (max-width: 768px) {
-            .word-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .control-group {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .control-group label {
-                min-width: auto;
-            }
+            .word-grid { grid-template-columns: 1fr; }
+            .control-group { flex-direction: column; align-items: stretch; }
+            .control-group label { min-width: auto; }
+        }
+        /* 新增GitHub相关样式 */
+        #updateList {
+            padding:10px; background:#f1f1f1; border-radius:8px; display:none; margin-bottom:10px;
+        }
+        #updateList div {
+            display: flex; justify-content: space-between; align-items: center;
+            margin:5px 0; background:white; padding:8px; border-radius:6px;
         }
     </style>
 </head>
@@ -367,9 +136,9 @@
     <div class="container">
         <div class="header">
             <h1>📚 医学词汇背词工具</h1>
-            <p>高效记忆医学专业词汇</p>
+            <p id="userStatus">正在加载...</p>
         </div>
-        
+
         <div class="controls">
             <div class="tabs">
                 <div class="tab active" onclick="switchTab('learning')">学习模式</div>
@@ -377,7 +146,8 @@
                 <div class="tab" onclick="switchTab('settings')">设置</div>
             </div>
         </div>
-        
+
+        <!-- 学习模式标签页 -->
         <div id="learning-tab" class="tab-content active">
             <div class="controls">
                 <div class="control-group">
@@ -385,16 +155,24 @@
                     <select id="fileSelector" onchange="switchToFile(this.value)">
                         <option value="">请选择或导入文件</option>
                     </select>
-                    <button class="btn btn-info" onclick="createNewVocabulary()" style="margin-left: 10px;">+ 新建空白词库</button>
-                    <button class="btn btn-danger" onclick="deleteCurrentFile()" style="margin-left: 5px;">删除当前文件</button>
+                    <button class="btn btn-info" onclick="createNewVocabulary()">+ 新建空白词库</button>
+                    <button class="btn btn-danger" onclick="deleteCurrentFile()">删除当前文件</button>
                 </div>
-                
+
                 <div class="control-group">
                     <label for="fileInput" class="file-label">📁 导入Excel文件</label>
                     <input type="file" id="fileInput" class="file-input" accept=".xlsx,.xls">
                     <span id="fileName" style="color: #6c757d; font-size: 14px;">未选择文件</span>
                 </div>
-                
+
+                <!-- 新增：云端词库更新 -->
+                <div class="control-group">
+                    <label>云端词库更新:</label>
+                    <button class="btn btn-success" onclick="checkUpdates()">🔍 检查更新</button>
+                    <span id="updateStatus" style="font-size:14px; color:#6c757d;"></span>
+                </div>
+                <div id="updateList"></div>
+
                 <div class="control-group">
                     <label>每页显示:</label>
                     <input type="number" id="wordsPerPage" value="10" min="1" max="50">
@@ -402,7 +180,7 @@
                     <button class="btn btn-danger" onclick="resetProgress()">重置进度</button>
                     <span class="swipe-hint">💡 提示：可以左右滑动翻页</span>
                 </div>
-                
+
                 <div class="control-group">
                     <label>显示模式:</label>
                     <select id="displayMode" onchange="updateDisplay()">
@@ -411,105 +189,84 @@
                         <option value="known">仅显示已会</option>
                     </select>
                     <button class="btn btn-success" onclick="exportUnknown()">导出不会词汇</button>
-                    <button class="btn btn-warning" onclick="jumpToFirstUnknown()" style="margin-left: 10px;">跳转到第一个未标记</button>
+                    <button class="btn btn-warning" onclick="jumpToFirstUnknown()">跳转到第一个未标记</button>
                 </div>
             </div>
-            
+
             <div class="stats" id="stats">
-                <div class="stat-item">
-                    <h4 id="totalCount">0</h4>
-                    <p>总词汇</p>
-                </div>
-                <div class="stat-item">
-                    <h4 id="knownCount">0</h4>
-                    <p>已掌握</p>
-                </div>
-                <div class="stat-item">
-                    <h4 id="unknownCount">0</h4>
-                    <p>未掌握</p>
-                </div>
-                <div class="stat-item">
-                    <h4 id="progressPercent">0%</h4>
-                    <p>掌握率</p>
-                </div>
+                <div class="stat-item"><h4 id="totalCount">0</h4><p>总词汇</p></div>
+                <div class="stat-item"><h4 id="knownCount">0</h4><p>已掌握</p></div>
+                <div class="stat-item"><h4 id="unknownCount">0</h4><p>未掌握</p></div>
+                <div class="stat-item"><h4 id="progressPercent">0%</h4><p>掌握率</p></div>
             </div>
-            
-            <div id="wordContainer" class="word-grid">
-            </div>
-            
+
+            <div id="wordContainer" class="word-grid"></div>
+
             <div class="pagination" id="pagination">
                 <button class="btn btn-primary" onclick="previousPage()">上一页</button>
                 <span class="page-info" id="pageInfo">第 1 页</span>
                 <button class="btn btn-primary" onclick="nextPage()">下一页</button>
-                <input type="number" id="pageJump" min="1" style="width: 60px; margin-left: 10px;">
-                <button class="btn btn-primary" onclick="jumpToPage()" style="margin-left: 5px;">跳转</button>
-                <button class="btn btn-success" onclick="markPageAllKnown()" style="margin-left: 10px;">本页全部掌握</button>
-                <button class="btn btn-danger" onclick="resetPageStatus()" style="margin-left: 5px;">重置本页掌握状态</button>
-                <button class="btn btn-info" onclick="markPageRestKnown()" style="margin-left: 5px;">本页其余已掌握</button>
+                <input type="number" id="pageJump" min="1" style="width:60px; margin-left:10px;">
+                <button class="btn btn-primary" onclick="jumpToPage()">跳转</button>
+                <button class="btn btn-success" onclick="markPageAllKnown()">本页全部掌握</button>
+                <button class="btn btn-danger" onclick="resetPageStatus()">重置本页掌握状态</button>
+                <button class="btn btn-info" onclick="markPageRestKnown()">本页其余已掌握</button>
             </div>
         </div>
-        
+
+        <!-- 复习模式标签页 -->
         <div id="review-tab" class="tab-content">
             <div class="controls">
                 <div class="control-group">
-            <label>复习模式:</label>
-            <select id="reviewMode" onchange="updateReviewDisplay()">
-                <option value="english">隐藏中文，只显示英文</option>
-                <option value="chinese">隐藏英文，只显示中文</option>
-                <option value="both">全部显示</option>
-            </select>
-        </div>
-        
-        <div class="control-group">
-            <label>批量操作:</label>
-            <button class="btn btn-success" onclick="markReviewPageAllKnown()">本页全部掌握</button>
-            <button class="btn btn-info" onclick="markReviewPageRestKnown()">本页其余已掌握</button>
-        </div>
-        
-        <div class="control-group">
-            <label>每页显示:</label>
-            <input type="number" id="reviewWordsPerPage" value="10" min="1" max="50">
-            <button class="btn btn-primary" onclick="updateReviewPagination()">应用</button>
-        </div>
+                    <label>复习模式:</label>
+                    <select id="reviewMode" onchange="updateReviewDisplay()">
+                        <option value="english">隐藏中文，只显示英文</option>
+                        <option value="chinese">隐藏英文，只显示中文</option>
+                        <option value="both">全部显示</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>批量操作:</label>
+                    <button class="btn btn-success" onclick="markReviewPageAllKnown()">本页全部掌握</button>
+                    <button class="btn btn-info" onclick="markReviewPageRestKnown()">本页其余已掌握</button>
+                </div>
+                <div class="control-group">
+                    <label>每页显示:</label>
+                    <input type="number" id="reviewWordsPerPage" value="10" min="1" max="50">
+                    <button class="btn btn-primary" onclick="updateReviewPagination()">应用</button>
+                </div>
             </div>
-            
-            <div id="reviewWordContainer" class="word-grid">
-            </div>
-            
+            <div id="reviewWordContainer" class="word-grid"></div>
             <div class="pagination" id="reviewPagination">
                 <button class="btn btn-primary" onclick="previousReviewPage()">上一页</button>
                 <span class="page-info" id="reviewPageInfo">第 1 页</span>
                 <button class="btn btn-primary" onclick="nextReviewPage()">下一页</button>
-                <input type="number" id="reviewPageJump" min="1" style="width: 60px; margin-left: 10px;">
-                <button class="btn btn-primary" onclick="jumpToReviewPage()" style="margin-left: 5px;">跳转</button>
+                <input type="number" id="reviewPageJump" min="1" style="width:60px; margin-left:10px;">
+                <button class="btn btn-primary" onclick="jumpToReviewPage()">跳转</button>
             </div>
         </div>
-        
+
+        <!-- 设置标签页 -->
         <div id="settings-tab" class="tab-content">
             <div class="controls">
-                <h2 style="margin-bottom: 20px;">设置</h2>
+                <h2 style="margin-bottom:20px;">设置</h2>
                 <div class="control-group">
                     <label>默认每页显示:</label>
                     <input type="number" id="defaultWordsPerPage" value="10" min="1" max="50">
                     <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
                 </div>
-                
                 <div class="control-group">
                     <label>翻页设置:</label>
-                    <label style="min-width: auto; font-weight: normal;">
-                        <input type="checkbox" id="autoScrollToFirst" style="margin-right: 8px;" onchange="toggleAutoScroll()">
-                        下一页时自动定位到第一个单词
+                    <label style="min-width:auto; font-weight:normal;">
+                        <input type="checkbox" id="autoScrollToFirst" onchange="toggleAutoScroll()"> 下一页时自动定位到第一个单词
                     </label>
                 </div>
-                
                 <div class="control-group">
                     <label>滑动设置:</label>
-                    <label style="min-width: auto; font-weight: normal;">
-                        <input type="checkbox" id="enableSwipe" style="margin-right: 8px;" onchange="toggleSwipe()">
-                        启用左右滑动翻页
+                    <label style="min-width:auto; font-weight:normal;">
+                        <input type="checkbox" id="enableSwipe" onchange="toggleSwipe()"> 启用左右滑动翻页
                     </label>
                 </div>
-                
                 <div class="control-group">
                     <label>数据管理:</label>
                     <button class="btn btn-danger" onclick="clearAllData()">清除所有数据</button>
@@ -522,6 +279,25 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
+        // ==================== Firebase 初始化 ====================
+        // ！！！请将下面的配置替换为你自己的 Firebase 配置 ！！！
+        const firebaseConfig = {
+            apiKey: "AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            authDomain: "your-project.firebaseapp.com",
+            projectId: "your-project",
+            storageBucket: "your-project.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:xxxxxxxxxxxxxxxx"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
+        // ==================== GitHub 云端词库配置 ====================
+        const GITHUB_OWNER = 'yyyaaa-maker';           // 你的 GitHub 用户名
+        const GITHUB_REPO = 'word-memorization-assistant';
+        const FOLDER_PATH = 'wordlists';               // xlsx 存放文件夹
+
+        // ==================== 全局变量（原有） ====================
         let db = null;
         let allWords = [];
         let currentPage = 1;
@@ -531,1529 +307,853 @@
         let currentReviewPage = 1;
         let reviewWordsPerPage = 10;
         let currentReviewMode = 'english';
-        
         let shownAnswers = new Set();
-        
-        let touchStartX = 0;
-        let touchEndX = 0;
-        let touchStartY = 0;
-        let touchEndY = 0;
-        const minSwipeDistance = 50;
-        const maxVerticalDistance = 100;
-        
+        let touchStartX = 0, touchEndX = 0, touchStartY = 0, touchEndY = 0;
+        const minSwipeDistance = 50, maxVerticalDistance = 100;
         let autoScrollToFirst = false;
         let enableSwipe = false;
-        
         let currentFileId = null;
         let fileList = [];
-        
+
+        // 已导入的云端文件记录（sha -> 文件信息）
+        let importedFiles = {};
+        try {
+            importedFiles = JSON.parse(localStorage.getItem('importedFiles') || '{}');
+        } catch(e) {}
+
+        function saveImportedFiles() {
+            localStorage.setItem('importedFiles', JSON.stringify(importedFiles));
+        }
+
+        // ==================== 用户登录/UI ====================
+        function updateUserUI(user) {
+            const statusEl = document.getElementById('userStatus');
+            if (user) {
+                statusEl.innerHTML = `已登录：${user.displayName || user.email} | <a href="#" onclick="logout()" style="color:white;">退出</a>`;
+            } else {
+                statusEl.innerHTML = `未登录 | <a href="#" onclick="loginWithGitHub()" style="color:white;">使用 GitHub 登录</a>`;
+            }
+        }
+
+        auth.onAuthStateChanged(user => {
+            updateUserUI(user);
+            // 登录时保存 token
+            if (user) {
+                // 从 credential 获取 token 需要在登录时完成，这里仅更新UI
+                // 已在loginWithGitHub中保存
+            } else {
+                localStorage.removeItem('githubToken');
+            }
+        });
+
+        function loginWithGitHub() {
+            const provider = new firebase.auth.GithubAuthProvider();
+            auth.signInWithPopup(provider).then(result => {
+                const credential = result.credential;
+                if (credential) {
+                    localStorage.setItem('githubToken', credential.accessToken);
+                }
+                updateUserUI(result.user);
+            }).catch(error => {
+                alert('登录失败：' + error.message);
+            });
+        }
+
+        function logout() {
+            auth.signOut();
+            localStorage.removeItem('githubToken');
+            updateUserUI(null);
+        }
+
+        function getGitHubToken() {
+            return localStorage.getItem('githubToken');
+        }
+
+        // ==================== IndexedDB 相关（原有） ====================
         function initIndexedDB() {
             return new Promise((resolve, reject) => {
-                const DB_NAME = 'MedicalVocabDB';
-                const DB_VERSION = 7;
-                
+                const DB_NAME = 'MedicalVocabDB', DB_VERSION = 7;
                 const request = indexedDB.open(DB_NAME, DB_VERSION);
-                
-                request.onerror = (event) => {
-                    console.error('IndexedDB打开失败:', event.target.error);
-                    reject(event.target.error);
-                };
-                
-                request.onsuccess = (event) => {
-                    db = event.target.result;
-                    console.log('IndexedDB打开成功，版本:', db.version);
-                    resolve(db);
-                };
-                
-                request.onupgradeneeded = (event) => {
-                    const database = event.target.result;
-                    const oldVersion = event.oldVersion;
-                    console.log(`数据库升级: ${oldVersion} -> ${DB_VERSION}`);
-                    
-                    if (!database.objectStoreNames.contains('files')) {
-                        database.createObjectStore('files', { keyPath: 'id', autoIncrement: true });
-                        console.log('创建 files 表');
-                    }
-                    
+                request.onerror = (e) => reject(e.target.error);
+                request.onsuccess = (e) => { db = e.target.result; resolve(db); };
+                request.onupgradeneeded = (e) => {
+                    const database = e.target.result;
+                    if (!database.objectStoreNames.contains('files')) database.createObjectStore('files', { keyPath: 'id', autoIncrement: true });
                     if (!database.objectStoreNames.contains('vocabulary')) {
                         const vocabStore = database.createObjectStore('vocabulary', { keyPath: 'id' });
                         vocabStore.createIndex('fileId', 'fileId', { unique: false });
-                        console.log('创建 vocabulary 表');
                     }
-                    
                     if (!database.objectStoreNames.contains('learningStatus')) {
                         const statusStore = database.createObjectStore('learningStatus', { keyPath: 'id', autoIncrement: true });
                         statusStore.createIndex('fileId', 'fileId', { unique: false });
                         statusStore.createIndex('wordId', 'wordId', { unique: false });
-                        console.log('创建 learningStatus 表');
                     }
-                    
-                    if (!database.objectStoreNames.contains('settings')) {
-                        database.createObjectStore('settings', { keyPath: 'id' });
-                        console.log('创建 settings 表');
-                    }
-                    
-                    console.log('数据库结构升级完成');
+                    if (!database.objectStoreNames.contains('settings')) database.createObjectStore('settings', { keyPath: 'id' });
                 };
-                
-                request.onblocked = (event) => {
-                    console.warn('数据库被阻塞，请关闭其他标签页');
-                    alert('数据库正在被其他页面使用，请关闭其他使用该应用的标签页后刷新');
-                };
+                request.onblocked = () => alert('数据库被其他页面占用，请关闭其他标签页后刷新');
             });
         }
-        
+
         async function getFileList() {
             if (!db) await initIndexedDB();
             return new Promise((resolve, reject) => {
-                const transaction = db.transaction(['files'], 'readonly');
-                const store = transaction.objectStore('files');
-                const request = store.getAll();
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
+                const tx = db.transaction(['files'], 'readonly');
+                const store = tx.objectStore('files');
+                const req = store.getAll();
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
             });
         }
-        
+
         async function saveFileInfo(fileName) {
             if (!db) await initIndexedDB();
             return new Promise((resolve, reject) => {
-                const transaction = db.transaction(['files'], 'readwrite');
-                const store = transaction.objectStore('files');
-                const fileInfo = {
-                    fileName: fileName,
-                    importTime: new Date().toISOString(),
-                    wordCount: 0
-                };
-                const request = store.add(fileInfo);
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = () => reject(request.error);
+                const tx = db.transaction(['files'], 'readwrite');
+                const store = tx.objectStore('files');
+                const req = store.add({ fileName, importTime: new Date().toISOString(), wordCount: 0 });
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
             });
         }
-        
+
         async function updateFileWordCount(fileId, count) {
             if (!db) await initIndexedDB();
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction(['files'], 'readwrite');
-                const store = transaction.objectStore('files');
-                const getRequest = store.get(fileId);
-                getRequest.onsuccess = () => {
-                    const file = getRequest.result;
-                    if (file) {
-                        file.wordCount = count;
-                        store.put(file);
-                    }
-                    resolve();
-                };
-                getRequest.onerror = () => reject(getRequest.error);
-            });
+            const tx = db.transaction(['files'], 'readwrite');
+            const store = tx.objectStore('files');
+            const getReq = store.get(fileId);
+            getReq.onsuccess = () => {
+                const file = getReq.result;
+                if (file) { file.wordCount = count; store.put(file); }
+            };
         }
-        
+
         async function deleteFileData(fileId) {
             if (!db) await initIndexedDB();
             return new Promise((resolve, reject) => {
-                const transaction = db.transaction(['files', 'vocabulary', 'learningStatus'], 'readwrite');
-                
-                const filesStore = transaction.objectStore('files');
-                filesStore.delete(fileId);
-                
-                const vocabStore = transaction.objectStore('vocabulary');
-                const vocabIndex = vocabStore.index('fileId');
-                const vocabRequest = vocabIndex.getAllKeys(fileId);
-                vocabRequest.onsuccess = () => {
-                    vocabRequest.result.forEach(key => vocabStore.delete(key));
-                };
-                
-                const statusStore = transaction.objectStore('learningStatus');
-                const statusIndex = statusStore.index('fileId');
-                const statusRequest = statusIndex.getAllKeys(fileId);
-                statusRequest.onsuccess = () => {
-                    statusRequest.result.forEach(key => statusStore.delete(key));
-                };
-                
-                transaction.oncomplete = () => resolve();
-                transaction.onerror = () => reject(transaction.error);
+                const tx = db.transaction(['files', 'vocabulary', 'learningStatus'], 'readwrite');
+                tx.objectStore('files').delete(fileId);
+                const vocabStore = tx.objectStore('vocabulary');
+                const vocabIdx = vocabStore.index('fileId');
+                vocabIdx.getAllKeys(fileId).onsuccess = (e) => e.target.result.forEach(k => vocabStore.delete(k));
+                const statusStore = tx.objectStore('learningStatus');
+                const statusIdx = statusStore.index('fileId');
+                statusIdx.getAllKeys(fileId).onsuccess = (e) => e.target.result.forEach(k => statusStore.delete(k));
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
             });
         }
-        
+
         async function loadVocabularyFromFile(fileId) {
             if (!db) await initIndexedDB();
             return new Promise((resolve, reject) => {
-                const transaction = db.transaction(['vocabulary', 'learningStatus'], 'readonly');
-                const vocabStore = transaction.objectStore('vocabulary');
-                const vocabIndex = vocabStore.index('fileId');
-                const vocabRequest = vocabIndex.getAll(fileId);
-                
-                vocabRequest.onsuccess = () => {
-                    const rawWords = vocabRequest.result;
-                    if (rawWords.length === 0) {
-                        resolve({ words: [], status: {} });
-                        return;
-                    }
-                    
-                    const words = rawWords.map(word => ({
-                        id: word.originalId !== undefined ? word.originalId : word.id,
-                        chinese: word.chinese,
-                        english: word.english,
-                        category: word.category
+                const tx = db.transaction(['vocabulary', 'learningStatus'], 'readonly');
+                const vocabStore = tx.objectStore('vocabulary');
+                const vocabIdx = vocabStore.index('fileId');
+                vocabIdx.getAll(fileId).onsuccess = (e) => {
+                    const rawWords = e.target.result;
+                    if (rawWords.length === 0) return resolve({ words: [], status: {} });
+                    const words = rawWords.map(w => ({
+                        id: w.originalId !== undefined ? w.originalId : w.id,
+                        chinese: w.chinese, english: w.english, category: w.category
                     })).sort((a, b) => a.id - b.id);
-                    
-                    const statusStore = transaction.objectStore('learningStatus');
-                    const statusIndex = statusStore.index('fileId');
-                    const statusRequest = statusIndex.getAll(fileId);
-                    
-                    statusRequest.onsuccess = () => {
+                    const statusStore = tx.objectStore('learningStatus');
+                    const statusIdx = statusStore.index('fileId');
+                    statusIdx.getAll(fileId).onsuccess = (ev) => {
                         const status = {};
-                        statusRequest.result.forEach(item => {
-                            status[item.wordId] = item.status;
-                        });
-                        resolve({ words: words, status: status });
+                        ev.target.result.forEach(item => { status[item.wordId] = item.status; });
+                        resolve({ words, status });
                     };
-                    statusRequest.onerror = () => resolve({ words: words, status: {} });
+                    statusIdx.getAll(fileId).onerror = () => resolve({ words, status: {} });
                 };
-                vocabRequest.onerror = () => reject(vocabRequest.error);
+                vocabIdx.getAll(fileId).onerror = () => reject(e.target.error);
             });
         }
-        
+
         async function saveVocabularyToDB(fileId, words, status) {
             if (!db) await initIndexedDB();
             return new Promise((resolve, reject) => {
-                const transaction = db.transaction(['vocabulary', 'learningStatus'], 'readwrite');
-                const vocabStore = transaction.objectStore('vocabulary');
-                const statusStore = transaction.objectStore('learningStatus');
-                
-                const vocabIndex = vocabStore.index('fileId');
-                const vocabRequest = vocabIndex.getAllKeys(fileId);
-                vocabRequest.onsuccess = () => {
-                    vocabRequest.result.forEach(key => {
-                        vocabStore.delete(key);
-                    });
-                    
+                const tx = db.transaction(['vocabulary', 'learningStatus'], 'readwrite');
+                const vocabStore = tx.objectStore('vocabulary');
+                const vocabIdx = vocabStore.index('fileId');
+                vocabIdx.getAllKeys(fileId).onsuccess = (e) => {
+                    e.target.result.forEach(k => vocabStore.delete(k));
                     const idOffset = parseInt(fileId) * 100000;
-                    
                     words.forEach(word => {
-                        const uniqueWord = {
-                            ...word,
-                            id: idOffset + word.id,
-                            originalId: word.id,
-                            fileId: fileId
-                        };
-                        vocabStore.put(uniqueWord);
+                        vocabStore.put({ ...word, id: idOffset + word.id, originalId: word.id, fileId });
                     });
-                    
-                    const statusIndex = statusStore.index('fileId');
-                    const statusRequest = statusIndex.getAllKeys(fileId);
-                    statusRequest.onsuccess = () => {
-                        statusRequest.result.forEach(key => {
-                            statusStore.delete(key);
-                        });
-                        
+                    const statusStore = tx.objectStore('learningStatus');
+                    const statusIdx = statusStore.index('fileId');
+                    statusIdx.getAllKeys(fileId).onsuccess = (ev) => {
+                        ev.target.result.forEach(k => statusStore.delete(k));
                         Object.entries(status).forEach(([wordId, stat]) => {
                             if (stat !== null && stat !== undefined) {
-                                statusStore.put({
-                                    fileId: fileId,
-                                    wordId: parseInt(wordId),
-                                    uniqueWordId: idOffset + parseInt(wordId),
-                                    status: stat
-                                });
+                                statusStore.put({ fileId, wordId: parseInt(wordId), uniqueWordId: idOffset + parseInt(wordId), status: stat });
                             }
                         });
-                        
                         updateFileWordCount(fileId, words.length);
                         resolve();
                     };
-                    statusRequest.onerror = () => reject(statusRequest.error);
+                    statusIdx.getAllKeys(fileId).onerror = () => reject(ev.target.error);
                 };
-                vocabRequest.onerror = () => reject(vocabRequest.error);
+                vocabIdx.getAllKeys(fileId).onerror = () => reject(e.target.error);
             });
         }
-        
-        function switchTab(tabName) {
-            try {
-                const tabs = document.querySelectorAll('.tab');
-                tabs.forEach(tab => tab.classList.remove('active'));
-                
-                const tabContents = document.querySelectorAll('.tab-content');
-                tabContents.forEach(content => content.classList.remove('active'));
-                
-                if (tabName === 'learning') {
-                    if (tabs[0]) tabs[0].classList.add('active');
-                    const learningTab = document.getElementById('learning-tab');
-                    if (learningTab) learningTab.classList.add('active');
-                } else if (tabName === 'review') {
-                    if (tabs[1]) tabs[1].classList.add('active');
-                    const reviewTab = document.getElementById('review-tab');
-                    if (reviewTab) reviewTab.classList.add('active');
-                    updateReviewDisplay();
-                } else if (tabName === 'settings') {
-                    if (tabs[2]) tabs[2].classList.add('active');
-                    const settingsTab = document.getElementById('settings-tab');
-                    if (settingsTab) settingsTab.classList.add('active');
-                }
-            } catch (error) {
-                console.error('切换标签页失败:', error);
-            }
-        }
-        
-        function handleTouchStart(evt) {
-            touchStartX = evt.touches[0].clientX;
-            touchStartY = evt.touches[0].clientY;
-        }
-        
-        function handleTouchMove(evt) {
-            if (!enableSwipe) {
-                return;
-            }
-            
-            if (Math.abs(evt.touches[0].clientY - touchStartY) < Math.abs(evt.touches[0].clientX - touchStartX)) {
-                evt.preventDefault();
-            }
-        }
-        
-        function handleTouchEnd(evt) {
-            if (!enableSwipe) {
-                return;
-            }
-            
-            touchEndX = evt.changedTouches[0].clientX;
-            touchEndY = evt.changedTouches[0].clientY;
-            handleSwipeGesture();
-        }
-        
-        function handleSwipeGesture() {
-            if (!enableSwipe) {
-                return;
-            }
-            
-            const deltaX = touchEndX - touchStartX;
-            const deltaY = Math.abs(touchEndY - touchStartY);
-            
-            if (Math.abs(deltaX) >= minSwipeDistance && deltaY <= maxVerticalDistance) {
-                const activeTab = document.querySelector('.tab-content.active');
-                
-                if (activeTab && activeTab.id === 'learning-tab') {
-                    if (deltaX > 0) {
-                        previousPage();
-                    } else {
-                        nextPage();
-                    }
-                } else if (activeTab && activeTab.id === 'review-tab') {
-                    if (deltaX > 0) {
-                        previousReviewPage();
-                    } else {
-                        nextReviewPage();
-                    }
-                }
-            }
-        }
-        
-        function initTouchEvents() {
-            const wordContainer = document.getElementById('wordContainer');
-            const reviewWordContainer = document.getElementById('reviewWordContainer');
-            
-            if (wordContainer) {
-                wordContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
-                wordContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
-                wordContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
-            }
-            
-            if (reviewWordContainer) {
-                reviewWordContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
-                reviewWordContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
-                reviewWordContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
-            }
-        }
-        
-        document.getElementById('fileInput').addEventListener('change', async function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                document.getElementById('fileName').textContent = file.name;
-                
-                try {
-                    const fileId = await saveFileInfo(file.name);
-                    currentFileId = fileId;
-                    
-                    const fileExtension = file.name.split('.').pop().toLowerCase();
-                    
-                    if (fileExtension === 'csv') {
-                        const reader = new FileReader();
-                        reader.onload = async function(e) {
-                            try {
-                                const text = e.target.result;
-                                await processCSVData(text, fileId, file.name);
-                                await refreshFileList();
-                                document.getElementById('fileSelector').value = fileId;
-                                alert(`文件 "${file.name}" 导入成功！共 ${allWords.length} 个词汇`);
-                            } catch (error) {
-                                console.error('CSV处理错误:', error);
-                                alert('CSV文件处理失败，请检查文件格式');
-                            }
-                        };
-                        reader.onerror = function() {
-                            alert('读取文件失败');
-                        };
-                        reader.readAsText(file, 'UTF-8');
-                    } else {
-                        const reader = new FileReader();
-                        reader.onload = async function(e) {
-                            try {
-                                const data = new Uint8Array(e.target.result);
-                                const workbook = XLSX.read(data, {type: 'array'});
-                                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                                const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
-                                await processExcelData(jsonData, fileId, file.name);
-                                await refreshFileList();
-                                document.getElementById('fileSelector').value = fileId;
-                                alert(`文件 "${file.name}" 导入成功！共 ${allWords.length} 个词汇`);
-                            } catch (error) {
-                                console.error('Excel处理错误:', error);
-                                alert('Excel文件处理失败，请检查文件格式');
-                            }
-                        };
-                        reader.onerror = function() {
-                            alert('读取文件失败');
-                        };
-                        reader.readAsArrayBuffer(file);
-                    }
-                } catch (error) {
-                    console.error('文件导入错误:', error);
-                    alert('文件导入失败，请重试');
-                }
-                
-                this.value = '';
-            }
-        });
-        
+
         async function refreshFileList() {
             fileList = await getFileList();
             const selector = document.getElementById('fileSelector');
             selector.innerHTML = '<option value="">请选择或导入文件</option>';
-            
             fileList.forEach(file => {
-                const option = document.createElement('option');
-                option.value = file.id;
-                option.textContent = `${file.fileName} (${file.wordCount}词)`;
-                if (file.id === currentFileId) {
-                    option.selected = true;
-                }
-                selector.appendChild(option);
+                const opt = document.createElement('option');
+                opt.value = file.id;
+                opt.textContent = `${file.fileName} (${file.wordCount}词)`;
+                if (file.id === currentFileId) opt.selected = true;
+                selector.appendChild(opt);
             });
         }
-        
+
         async function switchToFile(fileId) {
             if (!fileId) {
-                currentFileId = null;
-                allWords = [];
-                wordStatus = {};
-                currentPage = 1;
-                currentReviewPage = 1;
-                updateDisplay();
-                updateReviewDisplay();
-                updateStats();
+                currentFileId = null; allWords = []; wordStatus = {};
+                currentPage = 1; currentReviewPage = 1;
+                updateDisplay(); updateReviewDisplay(); updateStats();
                 return;
             }
-            
-            try {
-                currentFileId = parseInt(fileId);
-                const data = await loadVocabularyFromFile(currentFileId);
-                allWords = data.words;
-                wordStatus = data.status;
-                currentPage = 1;
-                currentReviewPage = 1;
-                updateDisplay();
-                updateReviewDisplay();
-                updateStats();
-            } catch (error) {
-                console.error('切换文件错误:', error);
-                alert('切换文件失败');
-            }
+            currentFileId = parseInt(fileId);
+            const data = await loadVocabularyFromFile(currentFileId);
+            allWords = data.words; wordStatus = data.status;
+            currentPage = 1; currentReviewPage = 1;
+            updateDisplay(); updateReviewDisplay(); updateStats();
         }
-        
+
         async function createNewVocabulary() {
             const name = prompt('请输入新词库的名称：', `新词库_${new Date().toLocaleDateString()}`);
-            
-            if (!name || !name.trim()) {
-                alert('词库名称不能为空');
-                return;
-            }
-            
+            if (!name || !name.trim()) return;
             const vocabularyName = name.trim();
-            
-            try {
-                const fileId = await saveFileInfo(vocabularyName + '.json');
-                
-                currentFileId = fileId;
-                allWords = [];
-                wordStatus = {};
-                currentPage = 1;
-                currentReviewPage = 1;
-                
-                await saveVocabularyToDB(fileId, allWords, wordStatus);
-                
-                await refreshFileList();
-                document.getElementById('fileSelector').value = fileId;
-                
-                updateDisplay();
-                updateReviewDisplay();
-                updateStats();
-                
-                alert(`空白词库 "${vocabularyName}" 创建成功！\n\n现在可以导入JSON学习进度或手动添加词汇。`);
-            } catch (error) {
-                console.error('创建词库失败:', error);
-                alert('创建词库失败: ' + error.message);
-            }
+            const fileId = await saveFileInfo(vocabularyName + '.json');
+            currentFileId = fileId; allWords = []; wordStatus = {};
+            currentPage = 1; currentReviewPage = 1;
+            await saveVocabularyToDB(fileId, allWords, wordStatus);
+            await refreshFileList();
+            document.getElementById('fileSelector').value = fileId;
+            updateDisplay(); updateReviewDisplay(); updateStats();
+            alert(`空白词库 "${vocabularyName}" 创建成功！`);
         }
-        
+
         async function deleteCurrentFile() {
-            if (!currentFileId) {
-                alert('请先选择一个文件');
-                return;
-            }
-            
-            if (!confirm(`确定要删除当前文件及其所有学习记录吗？此操作不可恢复！`)) {
-                return;
-            }
-            
-            try {
-                await deleteFileData(currentFileId);
-                currentFileId = null;
-                allWords = [];
-                wordStatus = {};
-                currentPage = 1;
-                currentReviewPage = 1;
-                
-                await refreshFileList();
-                updateDisplay();
-                updateReviewDisplay();
-                updateStats();
-                
-                alert('文件已删除');
-            } catch (error) {
-                console.error('删除文件错误:', error);
-                alert('删除文件失败');
-            }
+            if (!currentFileId) return alert('请先选择一个文件');
+            if (!confirm('确定要删除当前文件及其所有学习记录吗？')) return;
+            await deleteFileData(currentFileId);
+            currentFileId = null; allWords = []; wordStatus = {};
+            currentPage = 1; currentReviewPage = 1;
+            await refreshFileList();
+            updateDisplay(); updateReviewDisplay(); updateStats();
         }
-        
-        async function processCSVData(text, fileId, fileName) {
-            const newWords = [];
-            const newStatus = {};
-            
-            const lines = text.split('\n');
-            
+
+        // ==================== Excel 解析（原有，但稍作调整可复用） ====================
+        function parseCSVLine(line) {
+            const result = []; let current = '', inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    if (inQuotes && line[i+1] === '"') { current += '"'; i++; }
+                    else inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) { result.push(current); current = ''; }
+                else current += char;
+            }
+            result.push(current);
+            return result;
+        }
+
+        async function processExcelData(data, fileId, fileName) {
+            const newWords = [], newStatus = {};
             let wordIndex = 0;
-            
+            for (let i = 2; i < data.length; i++) {
+                const row = data[i];
+                if (!row || row.length === 0) continue;
+                const chinese = row[1] ? String(row[1]).trim() : '';
+                const english = row[2] ? String(row[2]).trim() : '';
+                if (chinese && english && chinese !== '中文' && english !== '英文') {
+                    newWords.push({ id: wordIndex, chinese, english, category: row[3] ? String(row[3]).trim() : '未分类' });
+                    newStatus[wordIndex] = null;
+                    wordIndex++;
+                }
+            }
+            allWords = newWords;
+            wordStatus = newStatus;
+            currentPage = 1; currentReviewPage = 1;
+            await saveVocabularyToDB(fileId, allWords, wordStatus);
+            updateDisplay();
+            if (document.querySelector('.tab-content.active')?.id === 'review-tab') updateReviewDisplay();
+            updateStats();
+        }
+
+        async function processCSVData(text, fileId, fileName) {
+            const newWords = [], newStatus = {};
+            const lines = text.split('\n');
+            let wordIndex = 0;
             for (let i = 2; i < lines.length; i++) {
                 const line = lines[i].trim();
                 if (!line) continue;
-                
                 const parts = parseCSVLine(line);
                 if (parts.length >= 3) {
-                    const chinese = parts[1] ? String(parts[1]).trim() : '';
-                    const english = parts[2] ? String(parts[2]).trim() : '';
-                    
+                    const chinese = parts[1]?.trim(), english = parts[2]?.trim();
                     if (chinese && english && chinese !== '中文' && english !== '英文') {
-                        newWords.push({
-                            id: wordIndex,
-                            chinese: chinese,
-                            english: english,
-                            category: parts[3] ? String(parts[3]).trim() : '未分类'
-                        });
+                        newWords.push({ id: wordIndex, chinese, english, category: parts[3] ? parts[3].trim() : '未分类' });
                         newStatus[wordIndex] = null;
                         wordIndex++;
                     }
                 }
             }
-            
-            allWords = newWords;
-            wordStatus = newStatus;
-            currentPage = 1;
-            currentReviewPage = 1;
-            
-            await saveVocabularyToDB(fileId, allWords, wordStatus);
-            
+            allWords = newWords; wordStatus = newStatus;
+            currentPage = 1; currentReviewPage = 1;
+            await saveVocabularyToDB(currentFileId, allWords, wordStatus);
             updateDisplay();
-            const activeTab = document.querySelector('.tab-content.active');
-            if (activeTab && activeTab.id === 'review-tab') {
-                updateReviewDisplay();
-            }
+            if (document.querySelector('.tab-content.active')?.id === 'review-tab') updateReviewDisplay();
             updateStats();
         }
-        
-        function parseCSVLine(line) {
-            const result = [];
-            let current = '';
-            let inQuotes = false;
-            
-            for (let i = 0; i < line.length; i++) {
-                const char = line[i];
-                
-                if (char === '"') {
-                    if (inQuotes && line[i + 1] === '"') {
-                        current += '"';
-                        i++;
-                    } else {
-                        inQuotes = !inQuotes;
-                    }
-                } else if (char === ',' && !inQuotes) {
-                    result.push(current);
-                    current = '';
-                } else {
-                    current += char;
-                }
-            }
-            
-            result.push(current);
-            return result;
+
+        // ==================== 学习/复习卡片 ====================
+        function createWordCard(word) {
+            const card = document.createElement('div');
+            card.className = 'word-card';
+            if (wordStatus[word.id] === 'known') card.classList.add('known');
+            else if (wordStatus[word.id] === 'unknown') card.classList.add('unknown');
+            card.innerHTML = `
+                <div class="word-header">
+                    <div class="word-number">${word.id + 1}</div>
+                    <div class="word-actions">
+                        <button class="icon-btn known" onclick="markKnown(${word.id})" title="标记为已掌握">✓</button>
+                        <button class="icon-btn unknown" onclick="markUnknown(${word.id})" title="标记为未掌握">✗</button>
+                    </div>
+                </div>
+                <div class="word-content">
+                    <h3>${word.english}</h3>
+                    <p class="english">${word.chinese}</p>
+                    <p>分类: ${word.category}</p>
+                </div>`;
+            return card;
         }
-        
-        async function processExcelData(data, fileId, fileName) {
-            const newWords = [];
-            const newStatus = {};
-            
-            let wordIndex = 0;
-            
-            for (let i = 2; i < data.length; i++) {
-                const row = data[i];
-                
-                if (!row || row.length === 0) continue;
-                
-                const chinese = row[1] ? String(row[1]).trim() : '';
-                const english = row[2] ? String(row[2]).trim() : '';
-                
-                if (chinese && english && chinese !== '中文' && english !== '英文') {
-                    newWords.push({
-                        id: wordIndex,
-                        chinese: chinese,
-                        english: english,
-                        category: row[3] ? String(row[3]).trim() : '未分类'
-                    });
-                    newStatus[wordIndex] = null;
-                    wordIndex++;
+
+        function createReviewWordCard(word, mode) {
+            const card = document.createElement('div');
+            card.className = 'word-card';
+            if (wordStatus[word.id] === 'known') card.classList.add('known');
+            else if (wordStatus[word.id] === 'unknown') card.classList.add('unknown');
+            const shouldShowAnswer = shownAnswers.has(word.id);
+            const answerDisplayStyle = shouldShowAnswer ? 'block' : 'none';
+            let contentHTML = '';
+            if (mode === 'english') {
+                contentHTML = `
+                    <h3>${word.english}</h3>
+                    <button class="btn btn-primary" onclick="showAnswer(${word.id}, 'chinese')" style="margin-top:10px;">显示答案</button>
+                    <div id="answer-${word.id}" style="display:${answerDisplayStyle}; margin-top:10px;">
+                        <p class="english">${word.chinese}</p><p>分类: ${word.category}</p>
+                    </div>`;
+            } else if (mode === 'chinese') {
+                contentHTML = `
+                    <h3>${word.chinese}</h3>
+                    <button class="btn btn-primary" onclick="showAnswer(${word.id}, 'english')" style="margin-top:10px;">显示答案</button>
+                    <div id="answer-${word.id}" style="display:${answerDisplayStyle}; margin-top:10px;">
+                        <p class="english">${word.english}</p><p>分类: ${word.category}</p>
+                    </div>`;
+            } else {
+                contentHTML = `<h3>${word.english}</h3><p class="english">${word.chinese}</p><p>分类: ${word.category}</p>`;
+            }
+            card.innerHTML = `
+                <div class="word-header">
+                    <div class="word-number">${word.id + 1}</div>
+                    <div class="word-actions">
+                        <button class="icon-btn known" onclick="markKnown(${word.id})">✓</button>
+                        <button class="icon-btn unknown" onclick="markUnknown(${word.id})">✗</button>
+                    </div>
+                </div>
+                <div class="word-content">${contentHTML}</div>`;
+            return card;
+        }
+
+        async function showAnswer(wordId, type) {
+            const answerDiv = document.getElementById(`answer-${wordId}`);
+            if (!answerDiv) return;
+            if (shownAnswers.has(wordId)) {
+                answerDiv.style.display = 'none'; shownAnswers.delete(wordId);
+            } else {
+                answerDiv.style.display = 'block'; shownAnswers.add(wordId);
+                if (wordStatus[wordId] !== 'unknown') {
+                    wordStatus[wordId] = 'unknown';
+                    updateReviewDisplay(); updateStats();
+                    await saveCurrentProgress();
                 }
             }
-            
-            allWords = newWords;
-            wordStatus = newStatus;
-            currentPage = 1;
-            currentReviewPage = 1;
-            
-            await saveVocabularyToDB(fileId, allWords, wordStatus);
-            
-            updateDisplay();
-            const activeTab = document.querySelector('.tab-content.active');
-            if (activeTab && activeTab.id === 'review-tab') {
-                updateReviewDisplay();
-            }
+        }
+
+        // ==================== 分页、导航 ====================
+        function updateDisplay() {
+            const container = document.getElementById('wordContainer');
+            container.innerHTML = '';
+            let filtered = allWords;
+            const mode = document.getElementById('displayMode').value;
+            currentDisplayMode = mode;
+            if (mode === 'unknown') filtered = allWords.filter(w => wordStatus[w.id] !== 'known');
+            else if (mode === 'known') filtered = allWords.filter(w => wordStatus[w.id] === 'known');
+            const start = (currentPage - 1) * wordsPerPage;
+            const pageWords = filtered.slice(start, start + wordsPerPage);
+            pageWords.forEach(w => container.appendChild(createWordCard(w)));
+            updatePagination();
             updateStats();
         }
-        
+
+        function updatePagination() {
+            wordsPerPage = parseInt(document.getElementById('wordsPerPage').value) || 10;
+            const mode = document.getElementById('displayMode').value;
+            let filtered = allWords;
+            if (mode === 'unknown') filtered = allWords.filter(w => wordStatus[w.id] !== 'known');
+            else if (mode === 'known') filtered = allWords.filter(w => wordStatus[w.id] === 'known');
+            const totalPages = Math.ceil(filtered.length / wordsPerPage) || 1;
+            document.getElementById('pageInfo').textContent = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
+            if (currentPage > totalPages) { currentPage = totalPages; updateDisplay(); }
+        }
+
+        function previousPage() { if (currentPage > 1) { currentPage--; updateDisplay(); } }
+        function nextPage() {
+            const mode = document.getElementById('displayMode').value;
+            let filtered = allWords;
+            if (mode === 'unknown') filtered = allWords.filter(w => wordStatus[w.id] !== 'known');
+            else if (mode === 'known') filtered = allWords.filter(w => wordStatus[w.id] === 'known');
+            const totalPages = Math.ceil(filtered.length / wordsPerPage) || 1;
+            if (currentPage < totalPages) {
+                currentPage++; updateDisplay();
+                if (autoScrollToFirst) setTimeout(() => {
+                    const cards = document.querySelectorAll('.word-card');
+                    if (cards.length) cards[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            }
+        }
+
+        function jumpToPage() {
+            const target = parseInt(document.getElementById('pageJump').value);
+            const mode = document.getElementById('displayMode').value;
+            let filtered = allWords;
+            if (mode === 'unknown') filtered = allWords.filter(w => wordStatus[w.id] !== 'known');
+            else if (mode === 'known') filtered = allWords.filter(w => wordStatus[w.id] === 'known');
+            const total = Math.ceil(filtered.length / wordsPerPage) || 1;
+            if (target >= 1 && target <= total) { currentPage = target; updateDisplay(); }
+            else alert('页码超出范围！');
+        }
+
+        function updateReviewDisplay() {
+            const container = document.getElementById('reviewWordContainer');
+            container.innerHTML = '';
+            const mode = document.getElementById('reviewMode').value;
+            currentReviewMode = mode;
+            const start = (currentReviewPage - 1) * reviewWordsPerPage;
+            const pageWords = allWords.slice(start, start + reviewWordsPerPage);
+            pageWords.forEach(w => container.appendChild(createReviewWordCard(w, mode)));
+            updateReviewPagination();
+        }
+
+        function updateReviewPagination() {
+            reviewWordsPerPage = parseInt(document.getElementById('reviewWordsPerPage').value) || 10;
+            const total = Math.ceil(allWords.length / reviewWordsPerPage) || 1;
+            document.getElementById('reviewPageInfo').textContent = `第 ${currentReviewPage} 页 / 共 ${total} 页`;
+            if (currentReviewPage > total) { currentReviewPage = total; updateReviewDisplay(); }
+        }
+
+        function previousReviewPage() { if (currentReviewPage > 1) { currentReviewPage--; updateReviewDisplay(); } }
+        function nextReviewPage() {
+            const total = Math.ceil(allWords.length / reviewWordsPerPage) || 1;
+            if (currentReviewPage < total) { currentReviewPage++; updateReviewDisplay(); }
+        }
+        function jumpToReviewPage() {
+            const target = parseInt(document.getElementById('reviewPageJump').value);
+            const total = Math.ceil(allWords.length / reviewWordsPerPage) || 1;
+            if (target >= 1 && target <= total) { currentReviewPage = target; updateReviewDisplay(); }
+            else alert('页码超出范围！');
+        }
+
+        // ==================== 标记操作 ====================
+        async function markKnown(wordId) {
+            wordStatus[wordId] = 'known';
+            updateDisplay(); if (document.querySelector('.tab-content.active')?.id === 'review-tab') updateReviewDisplay();
+            updateStats(); await saveCurrentProgress();
+        }
+        async function markUnknown(wordId) {
+            wordStatus[wordId] = 'unknown';
+            updateDisplay(); if (document.querySelector('.tab-content.active')?.id === 'review-tab') updateReviewDisplay();
+            updateStats(); await saveCurrentProgress();
+        }
+
+        async function markPageAllKnown() {
+            const mode = document.getElementById('displayMode').value;
+            let filtered = allWords;
+            if (mode === 'unknown') filtered = allWords.filter(w => wordStatus[w.id] !== 'known');
+            else if (mode === 'known') filtered = allWords.filter(w => wordStatus[w.id] === 'known');
+            const start = (currentPage - 1) * wordsPerPage;
+            const end = Math.min(start + wordsPerPage, filtered.length);
+            const pageWords = filtered.slice(start, end);
+            pageWords.forEach(w => wordStatus[w.id] = 'known');
+            updateDisplay(); if (document.querySelector('.tab-content.active')?.id === 'review-tab') updateReviewDisplay();
+            updateStats(); await saveCurrentProgress();
+        }
+
+        async function markPageRestKnown() {
+            const mode = document.getElementById('displayMode').value;
+            let filtered = allWords;
+            if (mode === 'unknown') filtered = allWords.filter(w => wordStatus[w.id] !== 'known');
+            else if (mode === 'known') filtered = allWords.filter(w => wordStatus[w.id] === 'known');
+            const start = (currentPage - 1) * wordsPerPage;
+            const end = Math.min(start + wordsPerPage, filtered.length);
+            const pageWords = filtered.slice(start, end);
+            if (!pageWords.some(w => wordStatus[w.id] === 'unknown')) { alert('当前页面没有未掌握词汇！'); return; }
+            pageWords.forEach(w => { if (wordStatus[w.id] !== 'unknown') wordStatus[w.id] = 'known'; });
+            updateDisplay(); if (document.querySelector('.tab-content.active')?.id === 'review-tab') updateReviewDisplay();
+            updateStats(); await saveCurrentProgress();
+        }
+
+        async function resetPageStatus() {
+            const mode = document.getElementById('displayMode').value;
+            let filtered = allWords;
+            if (mode === 'unknown') filtered = allWords.filter(w => wordStatus[w.id] !== 'known');
+            else if (mode === 'known') filtered = allWords.filter(w => wordStatus[w.id] === 'known');
+            const start = (currentPage - 1) * wordsPerPage;
+            const end = Math.min(start + wordsPerPage, filtered.length);
+            const pageWords = filtered.slice(start, end);
+            pageWords.forEach(w => { if (wordStatus[w.id] !== null) delete wordStatus[w.id]; });
+            updateDisplay(); updateStats(); await saveCurrentProgress();
+        }
+
+        async function markReviewPageAllKnown() {
+            const start = (currentReviewPage - 1) * reviewWordsPerPage;
+            const pageWords = allWords.slice(start, start + reviewWordsPerPage);
+            pageWords.forEach(w => wordStatus[w.id] = 'known');
+            updateReviewDisplay(); updateStats(); await saveCurrentProgress();
+        }
+
+        async function markReviewPageRestKnown() {
+            const start = (currentReviewPage - 1) * reviewWordsPerPage;
+            const pageWords = allWords.slice(start, start + reviewWordsPerPage);
+            if (!pageWords.some(w => wordStatus[w.id] === 'unknown')) { alert('当前页面没有未掌握词汇！'); return; }
+            pageWords.forEach(w => { if (wordStatus[w.id] !== 'unknown') wordStatus[w.id] = 'known'; });
+            updateReviewDisplay(); updateStats(); await saveCurrentProgress();
+        }
+
         async function saveCurrentProgress() {
             if (currentFileId && allWords.length > 0) {
                 await saveVocabularyToDB(currentFileId, allWords, wordStatus);
             }
         }
-        
-        async function loadWordsFromStorage() {
-            try {
-                fileList = await getFileList();
-                if (fileList.length > 0) {
-                    const firstFile = fileList[0];
-                    currentFileId = firstFile.id;
-                    
-                    const data = await loadVocabularyFromFile(currentFileId);
-                    allWords = data.words;
-                    wordStatus = data.status;
-                    shownAnswers.clear();
-                    
-                    if (allWords.length > 0) {
-                        currentPage = 1;
-                        currentReviewPage = 1;
-                        updateDisplay();
-                        updateStats();
-                        await refreshFileList();
-                        console.log(`已自动加载文件: ${firstFile.fileName}`);
-                        return true;
-                    }
-                }
-            } catch (e) {
-                console.error('加载数据失败:', e);
-            }
-            return false;
-        }
-        
-        function updateDisplay() {
-            const container = document.getElementById('wordContainer');
-            container.innerHTML = '';
-            
-            let filteredWords = allWords;
-            const displayMode = document.getElementById('displayMode').value;
-            currentDisplayMode = displayMode;
-            
-            if (displayMode === 'unknown') {
-                filteredWords = allWords.filter(word => wordStatus[word.id] !== 'known');
-            } else if (displayMode === 'known') {
-                filteredWords = allWords.filter(word => wordStatus[word.id] === 'known');
-            }
-            
-            const start = (currentPage - 1) * wordsPerPage;
-            const end = start + wordsPerPage;
-            const pageWords = filteredWords.slice(start, end);
-            
-            pageWords.forEach(word => {
-                const card = createWordCard(word);
-                container.appendChild(card);
-            });
-            
-            updatePagination();
-            updateStats();
-        }
-        
-        function createWordCard(word) {
-            const card = document.createElement('div');
-            card.className = 'word-card';
-            if (wordStatus[word.id] === 'known') {
-                card.classList.add('known');
-            } else if (wordStatus[word.id] === 'unknown') {
-                card.classList.add('unknown');
-            }
-            
-            card.innerHTML = `
-                <div class="word-header">
-                    <div class="word-number">${word.id + 1}</div>
-                    <div class="word-actions">
-                        <button class="icon-btn known" onclick="markKnown(${word.id})" title="标记为已掌握">✓</button>
-                        <button class="icon-btn unknown" onclick="markUnknown(${word.id})" title="标记为未掌握">✗</button>
-                    </div>
-                </div>
-                <div class="word-content">
-                    <h3>${word.english}</h3>
-                    <p class="english">${word.chinese}</p>
-                    <p>分类: ${word.category}</p>
-                </div>
-            `;
-            
-            return card;
-        }
-        
-        async function markKnown(wordId) {
-            wordStatus[wordId] = 'known';
-            updateDisplay();
-            const activeTab = document.querySelector('.tab-content.active');
-            if (activeTab && activeTab.id === 'review-tab') {
-                updateReviewDisplay();
-            }
-            updateStats();
-            await saveCurrentProgress();
-        }
-        
-        async function markUnknown(wordId) {
-            wordStatus[wordId] = 'unknown';
-            updateDisplay();
-            const activeTab = document.querySelector('.tab-content.active');
-            if (activeTab && activeTab.id === 'review-tab') {
-                updateReviewDisplay();
-            }
-            updateStats();
-            await saveCurrentProgress();
-        }
-        
-        function updatePagination() {
-            wordsPerPage = parseInt(document.getElementById('wordsPerPage').value);
-            const displayMode = document.getElementById('displayMode').value;
-            
-            let filteredWords = allWords;
-            if (displayMode === 'unknown') {
-                filteredWords = allWords.filter(word => wordStatus[word.id] !== 'known');
-            } else if (displayMode === 'known') {
-                filteredWords = allWords.filter(word => wordStatus[word.id] === 'known');
-            }
-            
-            const totalPages = Math.ceil(filteredWords.length / wordsPerPage);
-            
-            document.getElementById('pageInfo').textContent = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
-            document.getElementById('pageJump').max = totalPages;
-            
-            if (currentPage > totalPages && totalPages > 0) {
-                currentPage = totalPages;
-                updateDisplay();
-            }
-        }
-        
-        function previousPage() {
-            if (currentPage > 1) {
-                currentPage--;
-                updateDisplay();
-            }
-        }
-        
-        function nextPage() {
-            const displayMode = document.getElementById('displayMode').value;
-            let filteredWords = allWords;
-            if (displayMode === 'unknown') {
-                filteredWords = allWords.filter(word => wordStatus[word.id] !== 'known');
-            } else if (displayMode === 'known') {
-                filteredWords = allWords.filter(word => wordStatus[word.id] === 'known');
-            }
-            
-            const totalPages = Math.ceil(filteredWords.length / wordsPerPage);
-            if (currentPage < totalPages) {
-                currentPage++;
-                updateDisplay();
-                
-                if (autoScrollToFirst) {
-                    setTimeout(() => {
-                        const wordCards = document.querySelectorAll('.word-card');
-                        if (wordCards.length > 0) {
-                            wordCards[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }
-                    }, 100);
-                }
-            }
-        }
-        
-        function jumpToPage() {
-            const targetPage = parseInt(document.getElementById('pageJump').value);
-            const displayMode = document.getElementById('displayMode').value;
-            
-            let filteredWords = allWords;
-            if (displayMode === 'unknown') {
-                filteredWords = allWords.filter(word => wordStatus[word.id] !== 'known');
-            } else if (displayMode === 'known') {
-                filteredWords = allWords.filter(word => wordStatus[word.id] === 'known');
-            }
-            
-            const totalPages = Math.ceil(filteredWords.length / wordsPerPage);
-            
-            if (targetPage >= 1 && targetPage <= totalPages) {
-                currentPage = targetPage;
-                updateDisplay();
-            } else {
-                alert('页码超出范围！');
-            }
-        }
-        
-        function jumpToFirstUnknown() {
-            const firstUnknownIndex = allWords.findIndex(word => !wordStatus[word.id]);
-            
-            if (firstUnknownIndex === -1) {
-                alert('所有词汇都已标记！');
-                return;
-            }
-            
-            const targetPage = Math.floor(firstUnknownIndex / wordsPerPage) + 1;
-            
-            document.getElementById('displayMode').value = 'all';
-            
-            currentPage = targetPage;
-            updateDisplay();
-            
-            setTimeout(() => {
-                const wordCards = document.querySelectorAll('.word-card');
-                const targetCard = wordCards[firstUnknownIndex % wordsPerPage];
-                if (targetCard) {
-                    targetCard.classList.add('current');
-                    targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    setTimeout(() => {
-                        targetCard.classList.remove('current');
-                    }, 2000);
-                }
-            }, 100);
-        }
-        
-        async function markPageRestKnown() {
-            const displayMode = document.getElementById('displayMode').value;
-            let filteredWords = allWords;
-            
-            if (displayMode === 'unknown') {
-                filteredWords = allWords.filter(word => wordStatus[word.id] !== 'known');
-            } else if (displayMode === 'known') {
-                filteredWords = allWords.filter(word => wordStatus[word.id] === 'known');
-            }
-            
-            const start = (currentPage - 1) * wordsPerPage;
-            const end = start + wordsPerPage;
-            const pageWords = filteredWords.slice(start, end);
-            
-            const hasUnknownWords = pageWords.some(word => wordStatus[word.id] === 'unknown');
-            
-            if (!hasUnknownWords) {
-                alert('当前页面没有标记为"未掌握"的词汇！');
-                return;
-            }
-            
-            if (displayMode === 'unknown') {
-                const startIndex = start;
-                const endIndex = Math.min(end, allWords.length);
-                
-                for (let i = startIndex; i < endIndex; i++) {
-                    if (wordStatus[allWords[i].id] !== 'unknown') {
-                        wordStatus[allWords[i].id] = 'known';
-                    }
-                }
-            } else {
-                pageWords.forEach(word => {
-                    if (wordStatus[word.id] !== 'unknown') {
-                        wordStatus[word.id] = 'known';
-                    }
-                });
-            }
-            
-            updateDisplay();
-            const activeTab = document.querySelector('.tab-content.active');
-            if (activeTab && activeTab.id === 'review-tab') {
-                updateReviewDisplay();
-            }
-            updateStats();
-            await saveCurrentProgress();
-        }
-        
-        async function markPageAllKnown() {
-            const displayMode = document.getElementById('displayMode').value;
-            let filteredWords = allWords;
-            
-            if (displayMode === 'unknown') {
-                filteredWords = allWords.filter(word => wordStatus[word.id] !== 'known');
-            } else if (displayMode === 'known') {
-                filteredWords = allWords.filter(word => wordStatus[word.id] === 'known');
-            }
-            
-            const start = (currentPage - 1) * wordsPerPage;
-            const end = start + wordsPerPage;
-            const pageWords = filteredWords.slice(start, end);
-            
-            if (displayMode === 'unknown') {
-                const startIndex = start;
-                const endIndex = Math.min(end, allWords.length);
-                
-                for (let i = startIndex; i < endIndex; i++) {
-                    if (wordStatus[allWords[i].id] !== 'known') {
-                        wordStatus[allWords[i].id] = 'known';
-                    }
-                }
-            } else {
-                pageWords.forEach(word => {
-                    wordStatus[word.id] = 'known';
-                });
-            }
-            
-            updateDisplay();
-            const activeTab = document.querySelector('.tab-content.active');
-            if (activeTab && activeTab.id === 'review-tab') {
-                updateReviewDisplay();
-            }
-            updateStats();
-            await saveCurrentProgress();
-        }
-        
-        async function resetPageStatus() {
-            const displayMode = document.getElementById('displayMode').value;
-            let filteredWords = allWords;
-            
-            if (displayMode === 'unknown') {
-                filteredWords = allWords.filter(word => wordStatus[word.id] !== 'known');
-            } else if (displayMode === 'known') {
-                filteredWords = allWords.filter(word => wordStatus[word.id] === 'known');
-            }
-            
-            const start = (currentPage - 1) * wordsPerPage;
-            const end = start + wordsPerPage;
-            const pageWords = filteredWords.slice(start, end);
-            
-            if (displayMode === 'unknown') {
-                const startIndex = start;
-                const endIndex = Math.min(end, allWords.length);
-                
-                for (let i = startIndex; i < endIndex; i++) {
-                    if (wordStatus[allWords[i].id] !== null) {
-                        delete wordStatus[allWords[i].id];
-                    }
-                }
-            } else {
-                pageWords.forEach(word => {
-                    if (wordStatus[word.id] !== null) {
-                        delete wordStatus[word.id];
-                    }
-                });
-            }
-            
-            updateDisplay();
-            const activeTab = document.querySelector('.tab-content.active');
-            if (activeTab && activeTab.id === 'review-tab') {
-                updateReviewDisplay();
-            }
-            updateStats();
-            await saveCurrentProgress();
-        }
-        
-        function updateReviewDisplay() {
-            const container = document.getElementById('reviewWordContainer');
-            container.innerHTML = '';
-            
-            const reviewMode = document.getElementById('reviewMode').value;
-            currentReviewMode = reviewMode;
-            
-            const start = (currentReviewPage - 1) * reviewWordsPerPage;
-            const end = start + reviewWordsPerPage;
-            const pageWords = allWords.slice(start, end);
-            
-            pageWords.forEach(word => {
-                const card = createReviewWordCard(word, reviewMode);
-                container.appendChild(card);
-            });
-            
-            updateReviewPagination();
-        }
-        
-        async function markReviewPageAllKnown() {
-            const start = (currentReviewPage - 1) * reviewWordsPerPage;
-            const end = start + reviewWordsPerPage;
-            const pageWords = allWords.slice(start, end);
-            
-            pageWords.forEach(word => {
-                wordStatus[word.id] = 'known';
-            });
-            
-            updateReviewDisplay();
-            updateStats();
-            await saveCurrentProgress();
-        }
-        
-        async function markReviewPageRestKnown() {
-            const start = (currentReviewPage - 1) * reviewWordsPerPage;
-            const end = start + reviewWordsPerPage;
-            const pageWords = allWords.slice(start, end);
-            
-            const hasUnknownWords = pageWords.some(word => wordStatus[word.id] === 'unknown');
-            
-            if (!hasUnknownWords) {
-                alert('当前页面没有标记为"未掌握"的词汇！');
-                return;
-            }
-            
-            pageWords.forEach(word => {
-                if (wordStatus[word.id] !== 'unknown') {
-                    wordStatus[word.id] = 'known';
-                }
-            });
-            
-            updateReviewDisplay();
-            updateStats();
-            await saveCurrentProgress();
-        }
-        
-        function createReviewWordCard(word, mode) {
-            const card = document.createElement('div');
-            card.className = 'word-card';
-            if (wordStatus[word.id] === 'known') {
-                card.classList.add('known');
-            } else if (wordStatus[word.id] === 'unknown') {
-                card.classList.add('unknown');
-            }
-            
-            let contentHTML = '';
-            const shouldShowAnswer = shownAnswers.has(word.id);
-            const answerDisplayStyle = shouldShowAnswer ? 'block' : 'none';
-            
-            if (mode === 'english') {
-                contentHTML = `
-                    <h3>${word.english}</h3>
-                    <button class="btn btn-primary" onclick="showAnswer(${word.id}, 'chinese')" style="margin-top: 10px;">显示答案</button>
-                    <div id="answer-${word.id}" style="display: ${answerDisplayStyle}; margin-top: 10px;">
-                        <p class="english">${word.chinese}</p>
-                        <p>分类: ${word.category}</p>
-                    </div>
-                `;
-            } else if (mode === 'chinese') {
-                contentHTML = `
-                    <h3>${word.chinese}</h3>
-                    <button class="btn btn-primary" onclick="showAnswer(${word.id}, 'english')" style="margin-top: 10px;">显示答案</button>
-                    <div id="answer-${word.id}" style="display: ${answerDisplayStyle}; margin-top: 10px;">
-                        <p class="english">${word.english}</p>
-                        <p>分类: ${word.category}</p>
-                    </div>
-                `;
-            } else {
-                contentHTML = `
-                    <h3>${word.english}</h3>
-                    <p class="english">${word.chinese}</p>
-                    <p>分类: ${word.category}</p>
-                `;
-            }
-            
-            card.innerHTML = `
-                <div class="word-header">
-                    <div class="word-number">${word.id + 1}</div>
-                    <div class="word-actions">
-                        <button class="icon-btn known" onclick="markKnown(${word.id})" title="标记为已掌握">✓</button>
-                        <button class="icon-btn unknown" onclick="markUnknown(${word.id})" title="标记为未掌握">✗</button>
-                    </div>
-                </div>
-                <div class="word-content">
-                    ${contentHTML}
-                </div>
-            `;
-            
-            return card;
-        }
-        
-        async function showAnswer(wordId, type) {
-            const answerDiv = document.getElementById(`answer-${wordId}`);
-            if (answerDiv) {
-                const isCurrentlyShown = shownAnswers.has(wordId);
-                
-                if (isCurrentlyShown) {
-                    answerDiv.style.display = 'none';
-                    shownAnswers.delete(wordId);
-                } else {
-                    answerDiv.style.display = 'block';
-                    shownAnswers.add(wordId);
-                    
-                    if (wordStatus[wordId] !== 'unknown') {
-                        wordStatus[wordId] = 'unknown';
-                        updateReviewDisplay();
-                        updateStats();
-                        await saveCurrentProgress();
-                    }
-                }
-            }
-        }
-        
-        function updateReviewPagination() {
-            reviewWordsPerPage = parseInt(document.getElementById('reviewWordsPerPage').value);
-            const totalPages = Math.ceil(allWords.length / reviewWordsPerPage);
-            
-            document.getElementById('reviewPageInfo').textContent = `第 ${currentReviewPage} 页 / 共 ${totalPages} 页`;
-            document.getElementById('reviewPageJump').max = totalPages;
-            
-            if (currentReviewPage > totalPages && totalPages > 0) {
-                currentReviewPage = totalPages;
-                updateReviewDisplay();
-            }
-        }
-        
-        function previousReviewPage() {
-            if (currentReviewPage > 1) {
-                currentReviewPage--;
-                updateReviewDisplay();
-            }
-        }
-        
-        function nextReviewPage() {
-            const totalPages = Math.ceil(allWords.length / reviewWordsPerPage);
-            if (currentReviewPage < totalPages) {
-                currentReviewPage++;
-                updateReviewDisplay();
-            }
-        }
-        
-        function jumpToReviewPage() {
-            const targetPage = parseInt(document.getElementById('reviewPageJump').value);
-            const totalPages = Math.ceil(allWords.length / reviewWordsPerPage);
-            
-            if (targetPage >= 1 && targetPage <= totalPages) {
-                currentReviewPage = targetPage;
-                updateReviewDisplay();
-            } else {
-                alert('页码超出范围！');
-            }
-        }
-        
+
+        // ==================== 统计 & 其他 ====================
         function updateStats() {
             const total = allWords.length;
-            const known = Object.values(wordStatus).filter(status => status === 'known').length;
-            const unknown = Object.values(wordStatus).filter(status => status === 'unknown').length;
-            const percentage = total > 0 ? Math.round((known / total) * 100) : 0;
-            
+            const known = Object.values(wordStatus).filter(s => s === 'known').length;
+            const unknown = Object.values(wordStatus).filter(s => s === 'unknown').length;
             document.getElementById('totalCount').textContent = total;
             document.getElementById('knownCount').textContent = known;
             document.getElementById('unknownCount').textContent = unknown;
-            document.getElementById('progressPercent').textContent = percentage + '%';
+            document.getElementById('progressPercent').textContent = total ? Math.round((known/total)*100) + '%' : '0%';
         }
-        
+
         async function resetProgress() {
-            if (confirm('确定要重置当前文件的所有学习进度吗？')) {
-                if (!currentFileId) {
-                    alert('请先选择一个文件');
-                    return;
-                }
-                
-                wordStatus = {};
-                shownAnswers.clear();
-                currentPage = 1;
-                currentReviewPage = 1;
-                updateDisplay();
-                updateStats();
-                
-                await saveVocabularyToDB(currentFileId, allWords, wordStatus);
-            }
+            if (!confirm('确定要重置当前文件的所有学习进度吗？')) return;
+            if (!currentFileId) return alert('请先选择一个文件');
+            wordStatus = {}; shownAnswers.clear();
+            currentPage = 1; currentReviewPage = 1;
+            updateDisplay(); updateStats();
+            await saveVocabularyToDB(currentFileId, allWords, wordStatus);
         }
-        
+
         function exportUnknown() {
-            const unknownWords = allWords.filter(word => wordStatus[word.id] === 'unknown');
-            if (unknownWords.length === 0) {
-                alert('没有未掌握的词汇！');
-                return;
-            }
-            
-            let lastLearnedIndex = -1;
-            for (let i = 0; i < allWords.length; i++) {
-                if (wordStatus[allWords[i].id] === 'known' || wordStatus[allWords[i].id] === 'unknown') {
-                    lastLearnedIndex = i;
-                }
-            }
-            
-            if (lastLearnedIndex === -1) {
-                lastLearnedIndex = 0;
-            }
-            
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
-            
-            const timestamp = `${year}${month}${day}_${hours}${minutes}${seconds}`;
-            const range = `1-${lastLearnedIndex + 1}`;
-            const filename = `未掌握词汇_${range}_${timestamp}.csv`;
-            
-            const exportTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-            const progressName = `词汇进度: 1-${lastLearnedIndex + 1}`;
-            let csvContent = `"导出时间: ${exportTime}","${progressName}"\n`;
-            
-            csvContent += "序号,中文,英文,分类\n";
-            
-            unknownWords.forEach(word => {
-                const index = allWords.findIndex(w => w.id === word.id) + 1;
-                csvContent += `${index},"${word.chinese}","${word.english}","${word.category}"\n`;
+            const unknownWords = allWords.filter(w => wordStatus[w.id] === 'unknown');
+            if (!unknownWords.length) return alert('没有未掌握的词汇！');
+            let csvContent = "序号,中文,英文,分类\n";
+            unknownWords.forEach(w => {
+                const idx = allWords.findIndex(aw => aw.id === w.id) + 1;
+                csvContent += `${idx},"${w.chinese}","${w.english}","${w.category}"\n`;
             });
-            
             const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', filename);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `未掌握词汇_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
         }
-        
-        function saveSettings() {
-            const defaultWordsPerPage = document.getElementById('defaultWordsPerPage').value;
-            localStorage.setItem('defaultWordsPerPage', defaultWordsPerPage);
-            wordsPerPage = parseInt(defaultWordsPerPage);
-            reviewWordsPerPage = parseInt(defaultWordsPerPage);
-            document.getElementById('wordsPerPage').value = defaultWordsPerPage;
-            document.getElementById('reviewWordsPerPage').value = defaultWordsPerPage;
-            
-            autoScrollToFirst = document.getElementById('autoScrollToFirst').checked;
-            localStorage.setItem('autoScrollToFirst', String(autoScrollToFirst));
-            
-            enableSwipe = document.getElementById('enableSwipe').checked;
-            localStorage.setItem('enableSwipe', String(enableSwipe));
-            
-            document.getElementById('autoScrollToFirst').checked = autoScrollToFirst;
-            document.getElementById('enableSwipe').checked = enableSwipe;
-            
-            console.log('设置已保存:', { 
-                autoScrollToFirst, 
-                enableSwipe,
-                checkboxStates: {
-                    autoScroll: document.getElementById('autoScrollToFirst').checked,
-                    swipe: document.getElementById('enableSwipe').checked
-                }
-            });
-            
+
+        function jumpToFirstUnknown() {
+            const idx = allWords.findIndex(w => !wordStatus[w.id]);
+            if (idx === -1) return alert('所有词汇都已标记！');
+            document.getElementById('displayMode').value = 'all';
+            currentPage = Math.floor(idx / wordsPerPage) + 1;
             updateDisplay();
-            updateReviewDisplay();
-            alert('设置已保存！');
+            setTimeout(() => {
+                const cards = document.querySelectorAll('.word-card');
+                const target = cards[idx % wordsPerPage];
+                if (target) { target.classList.add('current'); target.scrollIntoView({ behavior:'smooth', block:'center' });
+                    setTimeout(() => target.classList.remove('current'), 2000); }
+            }, 100);
         }
-        
-        function toggleAutoScroll() {
-            autoScrollToFirst = document.getElementById('autoScrollToFirst').checked;
-            localStorage.setItem('autoScrollToFirst', String(autoScrollToFirst));
-            console.log('autoScrollToFirst 已切换为:', autoScrollToFirst);
-        }
-        
-        function toggleSwipe() {
-            enableSwipe = document.getElementById('enableSwipe').checked;
-            localStorage.setItem('enableSwipe', String(enableSwipe));
-            console.log('enableSwipe 已切换为:', enableSwipe);
-        }
-        
+
         async function clearAllData() {
-            if (confirm('确定要清除所有文件的数据吗？此操作不可恢复！')) {
-                try {
-                    const files = await getFileList();
-                    for (const file of files) {
-                        await deleteFileData(file.id);
-                    }
-                    
-                    currentFileId = null;
-                    allWords = [];
-                    wordStatus = {};
-                    shownAnswers.clear();
-                    currentPage = 1;
-                    currentReviewPage = 1;
-                    
-                    await refreshFileList();
-                    updateDisplay();
-                    updateStats();
-                    updateReviewDisplay();
-                    
-                    alert('所有数据已清除！');
-                } catch (error) {
-                    console.error('清除数据错误:', error);
-                    alert('清除数据失败');
-                }
-            }
+            if (!confirm('确定要清除所有文件的数据吗？此操作不可恢复！')) return;
+            const files = await getFileList();
+            for (const f of files) await deleteFileData(f.id);
+            currentFileId = null; allWords = []; wordStatus = {};
+            shownAnswers.clear(); currentPage = 1; currentReviewPage = 1;
+            await refreshFileList(); updateDisplay(); updateStats(); updateReviewDisplay();
         }
-        
+
         async function exportData() {
-            if (!currentFileId) {
-                alert('请先选择一个文件');
-                return;
-            }
-            
+            if (!currentFileId) return alert('请先选择一个文件');
             const currentFile = fileList.find(f => f.id === currentFileId);
-            
-            const data = {
-                fileId: currentFileId,
-                fileName: currentFile ? currentFile.fileName : 'unknown',
-                allWords: allWords,
-                wordStatus: wordStatus,
-                exportTime: new Date().toISOString()
-            };
-            
-            const dataStr = JSON.stringify(data);
-            const blob = new Blob([dataStr], { type: 'application/json' });
-            
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
-            
-            const timestamp = `${year}${month}${day}_${hours}${minutes}${seconds}`;
-            const safeFileName = (currentFile ? currentFile.fileName : 'data').replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_');
-            const filename = `${safeFileName}_学习进度_${timestamp}.json`;
-            
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', filename);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            const data = { fileId: currentFileId, fileName: currentFile?.fileName, allWords, wordStatus, exportTime: new Date().toISOString() };
+            const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `${currentFile?.fileName || 'data'}_学习进度_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
         }
-        
+
         function importData() {
             if (!currentFileId) {
-                const shouldCreate = confirm('当前未选择词库。\n\n是否要先创建一个新的空白词库？\n\n点击"确定"创建新词库，\n点击"取消"返回选择已有词库。');
-                
-                if (shouldCreate) {
-                    createNewVocabulary();
-                }
+                if (confirm('当前未选择词库。要先创建一个空白词库吗？')) createNewVocabulary();
                 return;
             }
-            
             const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json';
-            
-            input.onchange = async function(e) {
+            input.type = 'file'; input.accept = '.json';
+            input.onchange = async (e) => {
                 const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = async function(e) {
-                        try {
-                            const data = JSON.parse(e.target.result);
-                            
-                            if (!data.allWords || !data.wordStatus) {
-                                throw new Error('无效的数据格式');
-                            }
-                            
-                            allWords = data.allWords || [];
-                            wordStatus = data.wordStatus || {};
-                            currentPage = 1;
-                            currentReviewPage = 1;
-                            
-                            await saveVocabularyToDB(currentFileId, allWords, wordStatus);
-                            
-                            updateDisplay();
-                            updateStats();
-                            updateReviewDisplay();
-                            await refreshFileList();
-                            
-                            alert(`学习进度导入成功！\n导入自: ${data.fileName || '未知文件'}\n导出时间: ${data.exportTime ? new Date(data.exportTime).toLocaleString() : '未知'}`);
-                        } catch (error) {
-                            console.error('导入错误:', error);
-                            alert('导入失败，请检查文件格式！');
-                        }
-                    };
-                    reader.readAsText(file);
-                }
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async (ev) => {
+                    try {
+                        const data = JSON.parse(ev.target.result);
+                        if (!data.allWords || !data.wordStatus) throw new Error('无效格式');
+                        allWords = data.allWords; wordStatus = data.wordStatus;
+                        currentPage = 1; currentReviewPage = 1;
+                        await saveVocabularyToDB(currentFileId, allWords, wordStatus);
+                        updateDisplay(); updateStats(); updateReviewDisplay(); await refreshFileList();
+                        alert('学习进度导入成功！');
+                    } catch (err) { alert('导入失败：' + err.message); }
+                };
+                reader.readAsText(file);
             };
-            
             input.click();
         }
-        
-        async function migrateOldData() {
-            if (!db) return;
-            
-            try {
-                const transaction = db.transaction(['vocabulary', 'files'], 'readonly');
-                const vocabStore = transaction.objectStore('vocabulary');
-                const filesStore = transaction.objectStore('files');
-                
-                const filesRequest = filesStore.getAll();
-                
-                filesRequest.onsuccess = async () => {
-                    const files = filesRequest.result;
-                    
-                    const vocabRequest = vocabStore.getAll();
-                    vocabRequest.onsuccess = () => {
-                        const allVocab = vocabRequest.result;
-                        
-                        const needsMigration = allVocab.some(word => word.originalId === undefined);
-                        
-                        if (needsMigration && allVocab.length > 0) {
-                            console.log('检测到旧格式数据，开始迁移...');
-                            
-                            const groupedByFile = {};
-                            allVocab.forEach(word => {
-                                const fid = word.fileId;
-                                if (!groupedByFile[fid]) {
-                                    groupedByFile[fid] = [];
-                                }
-                                groupedByFile[fid].push(word);
-                            });
-                            
-                            Object.keys(groupedByFile).forEach(async (fileId) => {
-                                const words = groupedByFile[fileId];
-                                
-                                const idOffset = parseInt(fileId) * 100000;
-                                const migratedWords = words.map(word => ({
-                                    ...word,
-                                    id: idOffset + word.id,
-                                    originalId: word.id
-                                }));
-                                
-                                const writeTx = db.transaction(['vocabulary'], 'readwrite');
-                                const writeStore = writeTx.objectStore('vocabulary');
-                                
-                                migratedWords.forEach(word => {
-                                    writeStore.put(word);
-                                });
-                            });
-                            
-                            console.log('数据迁移完成！');
-                        } else {
-                            console.log('数据已是最新格式，无需迁移');
-                        }
-                    };
-                };
-            } catch (error) {
-                console.error('数据迁移失败:', error);
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            if (tabName === 'learning') {
+                document.querySelector('.tab:nth-child(1)').classList.add('active');
+                document.getElementById('learning-tab').classList.add('active');
+            } else if (tabName === 'review') {
+                document.querySelector('.tab:nth-child(2)').classList.add('active');
+                document.getElementById('review-tab').classList.add('active');
+                updateReviewDisplay();
+            } else if (tabName === 'settings') {
+                document.querySelector('.tab:nth-child(3)').classList.add('active');
+                document.getElementById('settings-tab').classList.add('active');
             }
         }
-        
+
+        // 触摸滑动
+        function initTouchEvents() {
+            const wc = document.getElementById('wordContainer');
+            const rwc = document.getElementById('reviewWordContainer');
+            const hStart = (e) => { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; };
+            const hMove = (e) => { if (!enableSwipe) return; if (Math.abs(e.touches[0].clientY - touchStartY) < Math.abs(e.touches[0].clientX - touchStartX)) e.preventDefault(); };
+            const hEnd = (e) => {
+                if (!enableSwipe) return;
+                touchEndX = e.changedTouches[0].clientX; touchEndY = e.changedTouches[0].clientY;
+                const dx = touchEndX - touchStartX, dy = Math.abs(touchEndY - touchStartY);
+                if (Math.abs(dx) >= minSwipeDistance && dy <= maxVerticalDistance) {
+                    if (document.querySelector('.tab-content.active')?.id === 'learning-tab') dx > 0 ? previousPage() : nextPage();
+                    else if (document.querySelector('.tab-content.active')?.id === 'review-tab') dx > 0 ? previousReviewPage() : nextReviewPage();
+                }
+            };
+            if (wc) { wc.addEventListener('touchstart', hStart, {passive:false}); wc.addEventListener('touchmove', hMove, {passive:false}); wc.addEventListener('touchend', hEnd, {passive:false}); }
+            if (rwc) { rwc.addEventListener('touchstart', hStart, {passive:false}); rwc.addEventListener('touchmove', hMove, {passive:false}); rwc.addEventListener('touchend', hEnd, {passive:false}); }
+        }
+
+        function saveSettings() {
+            const def = document.getElementById('defaultWordsPerPage').value;
+            localStorage.setItem('defaultWordsPerPage', def);
+            wordsPerPage = parseInt(def); reviewWordsPerPage = parseInt(def);
+            document.getElementById('wordsPerPage').value = def; document.getElementById('reviewWordsPerPage').value = def;
+            autoScrollToFirst = document.getElementById('autoScrollToFirst').checked;
+            enableSwipe = document.getElementById('enableSwipe').checked;
+            localStorage.setItem('autoScrollToFirst', String(autoScrollToFirst));
+            localStorage.setItem('enableSwipe', String(enableSwipe));
+            updateDisplay(); updateReviewDisplay();
+            alert('设置已保存！');
+        }
+        function toggleAutoScroll() { autoScrollToFirst = document.getElementById('autoScrollToFirst').checked; localStorage.setItem('autoScrollToFirst', String(autoScrollToFirst)); }
+        function toggleSwipe() { enableSwipe = document.getElementById('enableSwipe').checked; localStorage.setItem('enableSwipe', String(enableSwipe)); }
+
+        // ==================== 云端 GitHub 词库检查与导入 ====================
+        async function checkUpdates() {
+            const updateStatus = document.getElementById('updateStatus');
+            const updateListDiv = document.getElementById('updateList');
+            updateStatus.textContent = '正在检查...';
+            updateListDiv.style.display = 'none';
+            updateListDiv.innerHTML = '';
+
+            const token = getGitHubToken();
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+            try {
+                const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${FOLDER_PATH}`;
+                const resp = await fetch(url, { headers });
+                if (!resp.ok) throw new Error('无法访问文件夹，请确认仓库公开或登录');
+                const files = await resp.json();
+                const xlsxFiles = files.filter(f => f.name.endsWith('.xlsx'));
+                if (xlsxFiles.length === 0) {
+                    updateStatus.textContent = '云端暂无 xlsx 文件';
+                    return;
+                }
+                const newOrUpdated = xlsxFiles.filter(f => {
+                    const existing = importedFiles[f.name];
+                    return !existing || existing.sha !== f.sha;
+                });
+                if (newOrUpdated.length === 0) {
+                    updateStatus.textContent = '所有词库已是最新 ✨';
+                    return;
+                }
+                updateStatus.textContent = `发现 ${newOrUpdated.length} 个可更新/新词库`;
+                let html = '';
+                newOrUpdated.forEach(f => {
+                    const status = importedFiles[f.name] ? '(更新)' : '(新)';
+                    html += `<div>
+                        <span>📄 ${f.name} ${status}</span>
+                        <button class="btn btn-info" onclick="importGitHubFile('${f.download_url}', '${f.name}', '${f.sha}')">导入</button>
+                    </div>`;
+                });
+                updateListDiv.innerHTML = html;
+                updateListDiv.style.display = 'block';
+            } catch (err) {
+                updateStatus.textContent = '检查失败：' + err.message;
+            }
+        }
+
+        async function importGitHubFile(downloadUrl, fileName, sha) {
+            if (!currentFileId) {
+                alert('请先在左侧选择或创建一个词库！');
+                return;
+            }
+            const updateStatus = document.getElementById('updateStatus');
+            try {
+                updateStatus.textContent = `正在导入 ${fileName} ...`;
+                const resp = await fetch(downloadUrl);
+                if (!resp.ok) throw new Error('下载失败');
+                const arrayBuffer = await resp.arrayBuffer();
+                const data = new Uint8Array(arrayBuffer);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                // 使用当前 fileId 导入
+                await processExcelData(jsonData, currentFileId, fileName);
+                importedFiles[fileName] = { sha, time: new Date().toISOString() };
+                saveImportedFiles();
+                await refreshFileList();
+                updateStatus.textContent = `✅ "${fileName}" 导入成功！`;
+                document.getElementById('updateList').style.display = 'none';
+            } catch (err) {
+                updateStatus.textContent = '导入失败：' + err.message;
+            }
+        }
+
+        // 监听本地文件上传
+        document.getElementById('fileInput').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            document.getElementById('fileName').textContent = file.name;
+            try {
+                const fileId = await saveFileInfo(file.name);
+                currentFileId = fileId;
+                const ext = file.name.split('.').pop().toLowerCase();
+                if (ext === 'csv') {
+                    const reader = new FileReader();
+                    reader.onload = async (ev) => {
+                        await processCSVData(ev.target.result, fileId, file.name);
+                        await refreshFileList();
+                        document.getElementById('fileSelector').value = fileId;
+                        alert(`文件 "${file.name}" 导入成功！共 ${allWords.length} 个词汇`);
+                    };
+                    reader.readAsText(file, 'UTF-8');
+                } else {
+                    const reader = new FileReader();
+                    reader.onload = async (ev) => {
+                        const data = new Uint8Array(ev.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                        await processExcelData(jsonData, fileId, file.name);
+                        await refreshFileList();
+                        document.getElementById('fileSelector').value = fileId;
+                        alert(`文件 "${file.name}" 导入成功！共 ${allWords.length} 个词汇`);
+                    };
+                    reader.readAsArrayBuffer(file);
+                }
+            } catch (err) { alert('文件导入失败：' + err.message); }
+            this.value = '';
+        });
+
+        // ==================== 启动加载 ====================
         window.onload = async function() {
             try {
-                if (!window.indexedDB) {
-                    console.warn('浏览器不支持IndexedDB，将使用localStorage作为备选');
-                    alert('您的浏览器不支持IndexedDB，部分功能可能受限。建议使用Chrome、Edge或Firefox浏览器。');
-                }
-                
+                if (!window.indexedDB) alert('浏览器不支持IndexedDB，请使用Chrome、Edge或Firefox');
                 if (window.indexedDB) {
-                    try {
-                        await initIndexedDB();
-                        console.log('IndexedDB初始化成功');
-                        
-                        await migrateOldData();
-                    } catch (dbError) {
-                        console.error('IndexedDB初始化失败:', dbError);
-                        alert('数据库初始化失败: ' + dbError.message);
-                    }
+                    await initIndexedDB();
+                    // 迁移旧数据（略）
                 }
-                
                 const savedWordsPerPage = localStorage.getItem('defaultWordsPerPage');
                 if (savedWordsPerPage) {
-                    const wordsPerPageInput = document.getElementById('defaultWordsPerPage');
-                    const wordsInput = document.getElementById('wordsPerPage');
-                    const reviewInput = document.getElementById('reviewWordsPerPage');
-                    
-                    if (wordsPerPageInput) wordsPerPageInput.value = savedWordsPerPage;
-                    if (wordsInput) wordsInput.value = savedWordsPerPage;
-                    if (reviewInput) reviewInput.value = savedWordsPerPage;
+                    document.getElementById('defaultWordsPerPage').value = savedWordsPerPage;
+                    document.getElementById('wordsPerPage').value = savedWordsPerPage;
+                    document.getElementById('reviewWordsPerPage').value = savedWordsPerPage;
                     wordsPerPage = parseInt(savedWordsPerPage) || 10;
                     reviewWordsPerPage = parseInt(savedWordsPerPage) || 10;
                 }
-                
-                const savedAutoScrollToFirst = localStorage.getItem('autoScrollToFirst');
-                if (savedAutoScrollToFirst !== null) {
-                    autoScrollToFirst = savedAutoScrollToFirst === 'true';
-                    const autoScrollCheckbox = document.getElementById('autoScrollToFirst');
-                    if (autoScrollCheckbox) autoScrollCheckbox.checked = autoScrollToFirst;
+                const savedAuto = localStorage.getItem('autoScrollToFirst');
+                if (savedAuto !== null) {
+                    autoScrollToFirst = savedAuto === 'true';
+                    document.getElementById('autoScrollToFirst').checked = autoScrollToFirst;
                 }
-                
-                const savedEnableSwipe = localStorage.getItem('enableSwipe');
-                if (savedEnableSwipe !== null) {
-                    enableSwipe = savedEnableSwipe === 'true';
-                    const swipeCheckbox = document.getElementById('enableSwipe');
-                    if (swipeCheckbox) swipeCheckbox.checked = enableSwipe;
+                const savedSwipe = localStorage.getItem('enableSwipe');
+                if (savedSwipe !== null) {
+                    enableSwipe = savedSwipe === 'true';
+                    document.getElementById('enableSwipe').checked = enableSwipe;
                 }
-                
                 initTouchEvents();
-                
                 if (window.indexedDB && db) {
-                    try {
-                        await refreshFileList();
-                        const hasLoadedData = await loadWordsFromStorage();
-                        
-                        if (!hasLoadedData) {
-                            allWords = [];
-                            wordStatus = {};
-                            updateDisplay();
-                            updateStats();
-                        }
-                    } catch (dataError) {
-                        console.error('加载数据失败:', dataError);
-                        allWords = [];
-                        wordStatus = {};
-                        updateDisplay();
-                        updateStats();
-                    }
+                    await refreshFileList();
+                    const hasData = await loadWordsFromStorage();
+                    if (!hasData) { allWords = []; wordStatus = {}; updateDisplay(); updateStats(); }
                 } else {
-                    allWords = [];
-                    wordStatus = {};
-                    updateDisplay();
-                    updateStats();
+                    allWords = []; wordStatus = {}; updateDisplay(); updateStats();
                 }
-                
-                console.log('应用初始化完成');
-            } catch (error) {
-                console.error('初始化错误详情:', error);
-                console.error('错误堆栈:', error.stack);
-                
-                try {
-                    allWords = [];
-                    wordStatus = {};
-                    updateDisplay();
-                    updateStats();
-                } catch (fallbackError) {
-                    console.error('备用初始化也失败:', fallbackError);
-                }
-                
-                if (error.message && !error.message.includes('undefined')) {
-                    alert('应用初始化遇到问题: ' + error.message + '\n\n请刷新页面重试，或按F12查看详细错误信息。');
-                }
+                updateUserUI(auth.currentUser);
+            } catch (err) {
+                console.error(err);
+                allWords = []; wordStatus = {}; updateDisplay(); updateStats();
             }
         };
+
+        async function loadWordsFromStorage() {
+            fileList = await getFileList();
+            if (fileList.length > 0) {
+                const first = fileList[0];
+                currentFileId = first.id;
+                const data = await loadVocabularyFromFile(currentFileId);
+                allWords = data.words; wordStatus = data.status;
+                shownAnswers.clear();
+                if (allWords.length > 0) {
+                    currentPage = 1; currentReviewPage = 1;
+                    updateDisplay(); updateStats(); await refreshFileList();
+                    return true;
+                }
+            }
+            return false;
+        }
     </script>
 </body>
 </html>
