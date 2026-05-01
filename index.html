@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>医学词汇背词工具</title>
-    <!-- Firebase SDK (仅Auth，无需Firestore) -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
     <style>
@@ -122,7 +122,6 @@
             .control-group { flex-direction: column; align-items: stretch; }
             .control-group label { min-width: auto; }
         }
-        /* 新增GitHub相关样式 */
         #updateList {
             padding:10px; background:#f1f1f1; border-radius:8px; display:none; margin-bottom:10px;
         }
@@ -147,7 +146,6 @@
             </div>
         </div>
 
-        <!-- 学习模式标签页 -->
         <div id="learning-tab" class="tab-content active">
             <div class="controls">
                 <div class="control-group">
@@ -165,7 +163,6 @@
                     <span id="fileName" style="color: #6c757d; font-size: 14px;">未选择文件</span>
                 </div>
 
-                <!-- 新增：云端词库更新 -->
                 <div class="control-group">
                     <label>云端词库更新:</label>
                     <button class="btn btn-success" onclick="checkUpdates()">🔍 检查更新</button>
@@ -214,7 +211,6 @@
             </div>
         </div>
 
-        <!-- 复习模式标签页 -->
         <div id="review-tab" class="tab-content">
             <div class="controls">
                 <div class="control-group">
@@ -246,7 +242,6 @@
             </div>
         </div>
 
-        <!-- 设置标签页 -->
         <div id="settings-tab" class="tab-content">
             <div class="controls">
                 <h2 style="margin-bottom:20px;">设置</h2>
@@ -279,25 +274,24 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
-        // ==================== Firebase 初始化 ====================
-        // ！！！请将下面的配置替换为你自己的 Firebase 配置 ！！！
+        // ==================== Firebase 初始化（已配置） ====================
         const firebaseConfig = {
-            apiKey: "AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-            authDomain: "your-project.firebaseapp.com",
-            projectId: "your-project",
-            storageBucket: "your-project.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:xxxxxxxxxxxxxxxx"
+            apiKey: "AIzaSyAlWOvCtWCUbW4w5LHIIKjhl-PwpomF_DY",
+            authDomain: "words-908e4.firebaseapp.com",
+            projectId: "words-908e4",
+            storageBucket: "words-908e4.firebasestorage.app",
+            messagingSenderId: "722882308350",
+            appId: "1:722882308350:web:1e71e939ac3d6d5206ddaf"
         };
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
 
-        // ==================== GitHub 云端词库配置 ====================
-        const GITHUB_OWNER = 'yyyaaa-maker';           // 你的 GitHub 用户名
+        // ==================== GitHub 配置 ====================
+        const GITHUB_OWNER = 'yyyaaa-maker';
         const GITHUB_REPO = 'word-memorization-assistant';
-        const FOLDER_PATH = 'wordlists';               // xlsx 存放文件夹
+        const FOLDER_PATH = 'wordlists';
 
-        // ==================== 全局变量（原有） ====================
+        // ==================== 原有全局变量 ====================
         let db = null;
         let allWords = [];
         let currentPage = 1;
@@ -310,20 +304,12 @@
         let shownAnswers = new Set();
         let touchStartX = 0, touchEndX = 0, touchStartY = 0, touchEndY = 0;
         const minSwipeDistance = 50, maxVerticalDistance = 100;
-        let autoScrollToFirst = false;
-        let enableSwipe = false;
-        let currentFileId = null;
-        let fileList = [];
+        let autoScrollToFirst = false, enableSwipe = false;
+        let currentFileId = null, fileList = [];
 
-        // 已导入的云端文件记录（sha -> 文件信息）
         let importedFiles = {};
-        try {
-            importedFiles = JSON.parse(localStorage.getItem('importedFiles') || '{}');
-        } catch(e) {}
-
-        function saveImportedFiles() {
-            localStorage.setItem('importedFiles', JSON.stringify(importedFiles));
-        }
+        try { importedFiles = JSON.parse(localStorage.getItem('importedFiles') || '{}'); } catch(e) {}
+        function saveImportedFiles() { localStorage.setItem('importedFiles', JSON.stringify(importedFiles)); }
 
         // ==================== 用户登录/UI ====================
         function updateUserUI(user) {
@@ -337,26 +323,16 @@
 
         auth.onAuthStateChanged(user => {
             updateUserUI(user);
-            // 登录时保存 token
-            if (user) {
-                // 从 credential 获取 token 需要在登录时完成，这里仅更新UI
-                // 已在loginWithGitHub中保存
-            } else {
-                localStorage.removeItem('githubToken');
-            }
+            if (!user) localStorage.removeItem('githubToken');
         });
 
         function loginWithGitHub() {
             const provider = new firebase.auth.GithubAuthProvider();
             auth.signInWithPopup(provider).then(result => {
                 const credential = result.credential;
-                if (credential) {
-                    localStorage.setItem('githubToken', credential.accessToken);
-                }
+                if (credential) localStorage.setItem('githubToken', credential.accessToken);
                 updateUserUI(result.user);
-            }).catch(error => {
-                alert('登录失败：' + error.message);
-            });
+            }).catch(error => alert('登录失败：' + error.message));
         }
 
         function logout() {
@@ -365,18 +341,16 @@
             updateUserUI(null);
         }
 
-        function getGitHubToken() {
-            return localStorage.getItem('githubToken');
-        }
+        function getGitHubToken() { return localStorage.getItem('githubToken'); }
 
-        // ==================== IndexedDB 相关（原有） ====================
+        // ==================== IndexedDB 全部保留 ====================
         function initIndexedDB() {
             return new Promise((resolve, reject) => {
                 const DB_NAME = 'MedicalVocabDB', DB_VERSION = 7;
                 const request = indexedDB.open(DB_NAME, DB_VERSION);
-                request.onerror = (e) => reject(e.target.error);
-                request.onsuccess = (e) => { db = e.target.result; resolve(db); };
-                request.onupgradeneeded = (e) => {
+                request.onerror = e => reject(e.target.error);
+                request.onsuccess = e => { db = e.target.result; resolve(db); };
+                request.onupgradeneeded = e => {
                     const database = e.target.result;
                     if (!database.objectStoreNames.contains('files')) database.createObjectStore('files', { keyPath: 'id', autoIncrement: true });
                     if (!database.objectStoreNames.contains('vocabulary')) {
@@ -390,7 +364,7 @@
                     }
                     if (!database.objectStoreNames.contains('settings')) database.createObjectStore('settings', { keyPath: 'id' });
                 };
-                request.onblocked = () => alert('数据库被其他页面占用，请关闭其他标签页后刷新');
+                request.onblocked = () => alert('数据库被占用，请关闭其他标签页后刷新');
             });
         }
 
@@ -421,10 +395,7 @@
             const tx = db.transaction(['files'], 'readwrite');
             const store = tx.objectStore('files');
             const getReq = store.get(fileId);
-            getReq.onsuccess = () => {
-                const file = getReq.result;
-                if (file) { file.wordCount = count; store.put(file); }
-            };
+            getReq.onsuccess = () => { const file = getReq.result; if (file) { file.wordCount = count; store.put(file); } };
         }
 
         async function deleteFileData(fileId) {
@@ -434,10 +405,10 @@
                 tx.objectStore('files').delete(fileId);
                 const vocabStore = tx.objectStore('vocabulary');
                 const vocabIdx = vocabStore.index('fileId');
-                vocabIdx.getAllKeys(fileId).onsuccess = (e) => e.target.result.forEach(k => vocabStore.delete(k));
+                vocabIdx.getAllKeys(fileId).onsuccess = e => e.target.result.forEach(k => vocabStore.delete(k));
                 const statusStore = tx.objectStore('learningStatus');
                 const statusIdx = statusStore.index('fileId');
-                statusIdx.getAllKeys(fileId).onsuccess = (e) => e.target.result.forEach(k => statusStore.delete(k));
+                statusIdx.getAllKeys(fileId).onsuccess = e => e.target.result.forEach(k => statusStore.delete(k));
                 tx.oncomplete = () => resolve();
                 tx.onerror = () => reject(tx.error);
             });
@@ -449,16 +420,16 @@
                 const tx = db.transaction(['vocabulary', 'learningStatus'], 'readonly');
                 const vocabStore = tx.objectStore('vocabulary');
                 const vocabIdx = vocabStore.index('fileId');
-                vocabIdx.getAll(fileId).onsuccess = (e) => {
+                vocabIdx.getAll(fileId).onsuccess = e => {
                     const rawWords = e.target.result;
                     if (rawWords.length === 0) return resolve({ words: [], status: {} });
                     const words = rawWords.map(w => ({
                         id: w.originalId !== undefined ? w.originalId : w.id,
                         chinese: w.chinese, english: w.english, category: w.category
-                    })).sort((a, b) => a.id - b.id);
+                    })).sort((a,b) => a.id - b.id);
                     const statusStore = tx.objectStore('learningStatus');
                     const statusIdx = statusStore.index('fileId');
-                    statusIdx.getAll(fileId).onsuccess = (ev) => {
+                    statusIdx.getAll(fileId).onsuccess = ev => {
                         const status = {};
                         ev.target.result.forEach(item => { status[item.wordId] = item.status; });
                         resolve({ words, status });
@@ -475,20 +446,17 @@
                 const tx = db.transaction(['vocabulary', 'learningStatus'], 'readwrite');
                 const vocabStore = tx.objectStore('vocabulary');
                 const vocabIdx = vocabStore.index('fileId');
-                vocabIdx.getAllKeys(fileId).onsuccess = (e) => {
+                vocabIdx.getAllKeys(fileId).onsuccess = e => {
                     e.target.result.forEach(k => vocabStore.delete(k));
                     const idOffset = parseInt(fileId) * 100000;
-                    words.forEach(word => {
-                        vocabStore.put({ ...word, id: idOffset + word.id, originalId: word.id, fileId });
-                    });
+                    words.forEach(word => vocabStore.put({ ...word, id: idOffset + word.id, originalId: word.id, fileId }));
                     const statusStore = tx.objectStore('learningStatus');
                     const statusIdx = statusStore.index('fileId');
-                    statusIdx.getAllKeys(fileId).onsuccess = (ev) => {
+                    statusIdx.getAllKeys(fileId).onsuccess = ev => {
                         ev.target.result.forEach(k => statusStore.delete(k));
                         Object.entries(status).forEach(([wordId, stat]) => {
-                            if (stat !== null && stat !== undefined) {
+                            if (stat !== null && stat !== undefined)
                                 statusStore.put({ fileId, wordId: parseInt(wordId), uniqueWordId: idOffset + parseInt(wordId), status: stat });
-                            }
                         });
                         updateFileWordCount(fileId, words.length);
                         resolve();
@@ -550,7 +518,6 @@
             updateDisplay(); updateReviewDisplay(); updateStats();
         }
 
-        // ==================== Excel 解析（原有，但稍作调整可复用） ====================
         function parseCSVLine(line) {
             const result = []; let current = '', inQuotes = false;
             for (let i = 0; i < line.length; i++) {
@@ -561,8 +528,7 @@
                 } else if (char === ',' && !inQuotes) { result.push(current); current = ''; }
                 else current += char;
             }
-            result.push(current);
-            return result;
+            result.push(current); return result;
         }
 
         async function processExcelData(data, fileId, fileName) {
@@ -579,8 +545,7 @@
                     wordIndex++;
                 }
             }
-            allWords = newWords;
-            wordStatus = newStatus;
+            allWords = newWords; wordStatus = newStatus;
             currentPage = 1; currentReviewPage = 1;
             await saveVocabularyToDB(fileId, allWords, wordStatus);
             updateDisplay();
@@ -607,13 +572,12 @@
             }
             allWords = newWords; wordStatus = newStatus;
             currentPage = 1; currentReviewPage = 1;
-            await saveVocabularyToDB(currentFileId, allWords, wordStatus);
+            await saveVocabularyToDB(fileId, allWords, wordStatus);
             updateDisplay();
             if (document.querySelector('.tab-content.active')?.id === 'review-tab') updateReviewDisplay();
             updateStats();
         }
 
-        // ==================== 学习/复习卡片 ====================
         function createWordCard(word) {
             const card = document.createElement('div');
             card.className = 'word-card';
@@ -623,8 +587,8 @@
                 <div class="word-header">
                     <div class="word-number">${word.id + 1}</div>
                     <div class="word-actions">
-                        <button class="icon-btn known" onclick="markKnown(${word.id})" title="标记为已掌握">✓</button>
-                        <button class="icon-btn unknown" onclick="markUnknown(${word.id})" title="标记为未掌握">✗</button>
+                        <button class="icon-btn known" onclick="markKnown(${word.id})">✓</button>
+                        <button class="icon-btn unknown" onclick="markUnknown(${word.id})">✗</button>
                     </div>
                 </div>
                 <div class="word-content">
@@ -640,23 +604,18 @@
             card.className = 'word-card';
             if (wordStatus[word.id] === 'known') card.classList.add('known');
             else if (wordStatus[word.id] === 'unknown') card.classList.add('unknown');
-            const shouldShowAnswer = shownAnswers.has(word.id);
-            const answerDisplayStyle = shouldShowAnswer ? 'block' : 'none';
+            const shouldShow = shownAnswers.has(word.id);
             let contentHTML = '';
             if (mode === 'english') {
-                contentHTML = `
-                    <h3>${word.english}</h3>
-                    <button class="btn btn-primary" onclick="showAnswer(${word.id}, 'chinese')" style="margin-top:10px;">显示答案</button>
-                    <div id="answer-${word.id}" style="display:${answerDisplayStyle}; margin-top:10px;">
-                        <p class="english">${word.chinese}</p><p>分类: ${word.category}</p>
-                    </div>`;
+                contentHTML = `<h3>${word.english}</h3>
+                    <button class="btn btn-primary" onclick="showAnswer(${word.id})" style="margin-top:10px;">显示答案</button>
+                    <div id="answer-${word.id}" style="display:${shouldShow?'block':'none'}; margin-top:10px;">
+                        <p class="english">${word.chinese}</p><p>分类: ${word.category}</p></div>`;
             } else if (mode === 'chinese') {
-                contentHTML = `
-                    <h3>${word.chinese}</h3>
-                    <button class="btn btn-primary" onclick="showAnswer(${word.id}, 'english')" style="margin-top:10px;">显示答案</button>
-                    <div id="answer-${word.id}" style="display:${answerDisplayStyle}; margin-top:10px;">
-                        <p class="english">${word.english}</p><p>分类: ${word.category}</p>
-                    </div>`;
+                contentHTML = `<h3>${word.chinese}</h3>
+                    <button class="btn btn-primary" onclick="showAnswer(${word.id})" style="margin-top:10px;">显示答案</button>
+                    <div id="answer-${word.id}" style="display:${shouldShow?'block':'none'}; margin-top:10px;">
+                        <p class="english">${word.english}</p><p>分类: ${word.category}</p></div>`;
             } else {
                 contentHTML = `<h3>${word.english}</h3><p class="english">${word.chinese}</p><p>分类: ${word.category}</p>`;
             }
@@ -672,7 +631,7 @@
             return card;
         }
 
-        async function showAnswer(wordId, type) {
+        async function showAnswer(wordId) {
             const answerDiv = document.getElementById(`answer-${wordId}`);
             if (!answerDiv) return;
             if (shownAnswers.has(wordId)) {
@@ -681,59 +640,47 @@
                 answerDiv.style.display = 'block'; shownAnswers.add(wordId);
                 if (wordStatus[wordId] !== 'unknown') {
                     wordStatus[wordId] = 'unknown';
-                    updateReviewDisplay(); updateStats();
-                    await saveCurrentProgress();
+                    updateReviewDisplay(); updateStats(); await saveCurrentProgress();
                 }
             }
         }
 
-        // ==================== 分页、导航 ====================
         function updateDisplay() {
             const container = document.getElementById('wordContainer');
             container.innerHTML = '';
             let filtered = allWords;
             const mode = document.getElementById('displayMode').value;
-            currentDisplayMode = mode;
             if (mode === 'unknown') filtered = allWords.filter(w => wordStatus[w.id] !== 'known');
             else if (mode === 'known') filtered = allWords.filter(w => wordStatus[w.id] === 'known');
             const start = (currentPage - 1) * wordsPerPage;
-            const pageWords = filtered.slice(start, start + wordsPerPage);
-            pageWords.forEach(w => container.appendChild(createWordCard(w)));
-            updatePagination();
-            updateStats();
+            filtered.slice(start, start + wordsPerPage).forEach(w => container.appendChild(createWordCard(w)));
+            updatePagination(); updateStats();
         }
 
         function updatePagination() {
             wordsPerPage = parseInt(document.getElementById('wordsPerPage').value) || 10;
-            const mode = document.getElementById('displayMode').value;
             let filtered = allWords;
+            const mode = document.getElementById('displayMode').value;
             if (mode === 'unknown') filtered = allWords.filter(w => wordStatus[w.id] !== 'known');
             else if (mode === 'known') filtered = allWords.filter(w => wordStatus[w.id] === 'known');
-            const totalPages = Math.ceil(filtered.length / wordsPerPage) || 1;
-            document.getElementById('pageInfo').textContent = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
-            if (currentPage > totalPages) { currentPage = totalPages; updateDisplay(); }
+            const total = Math.ceil(filtered.length / wordsPerPage) || 1;
+            document.getElementById('pageInfo').textContent = `第 ${currentPage} 页 / 共 ${total} 页`;
+            if (currentPage > total) { currentPage = total; updateDisplay(); }
         }
 
         function previousPage() { if (currentPage > 1) { currentPage--; updateDisplay(); } }
         function nextPage() {
-            const mode = document.getElementById('displayMode').value;
             let filtered = allWords;
+            const mode = document.getElementById('displayMode').value;
             if (mode === 'unknown') filtered = allWords.filter(w => wordStatus[w.id] !== 'known');
             else if (mode === 'known') filtered = allWords.filter(w => wordStatus[w.id] === 'known');
-            const totalPages = Math.ceil(filtered.length / wordsPerPage) || 1;
-            if (currentPage < totalPages) {
-                currentPage++; updateDisplay();
-                if (autoScrollToFirst) setTimeout(() => {
-                    const cards = document.querySelectorAll('.word-card');
-                    if (cards.length) cards[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 100);
-            }
+            const total = Math.ceil(filtered.length / wordsPerPage) || 1;
+            if (currentPage < total) { currentPage++; updateDisplay(); if (autoScrollToFirst) setTimeout(() => { const c = document.querySelectorAll('.word-card'); if (c.length) c[0].scrollIntoView({ behavior:'smooth', block:'start' }); }, 100); }
         }
-
         function jumpToPage() {
             const target = parseInt(document.getElementById('pageJump').value);
-            const mode = document.getElementById('displayMode').value;
             let filtered = allWords;
+            const mode = document.getElementById('displayMode').value;
             if (mode === 'unknown') filtered = allWords.filter(w => wordStatus[w.id] !== 'known');
             else if (mode === 'known') filtered = allWords.filter(w => wordStatus[w.id] === 'known');
             const total = Math.ceil(filtered.length / wordsPerPage) || 1;
@@ -745,10 +692,8 @@
             const container = document.getElementById('reviewWordContainer');
             container.innerHTML = '';
             const mode = document.getElementById('reviewMode').value;
-            currentReviewMode = mode;
             const start = (currentReviewPage - 1) * reviewWordsPerPage;
-            const pageWords = allWords.slice(start, start + reviewWordsPerPage);
-            pageWords.forEach(w => container.appendChild(createReviewWordCard(w, mode)));
+            allWords.slice(start, start + reviewWordsPerPage).forEach(w => container.appendChild(createReviewWordCard(w, mode)));
             updateReviewPagination();
         }
 
@@ -760,10 +705,7 @@
         }
 
         function previousReviewPage() { if (currentReviewPage > 1) { currentReviewPage--; updateReviewDisplay(); } }
-        function nextReviewPage() {
-            const total = Math.ceil(allWords.length / reviewWordsPerPage) || 1;
-            if (currentReviewPage < total) { currentReviewPage++; updateReviewDisplay(); }
-        }
+        function nextReviewPage() { const total = Math.ceil(allWords.length / reviewWordsPerPage) || 1; if (currentReviewPage < total) { currentReviewPage++; updateReviewDisplay(); } }
         function jumpToReviewPage() {
             const target = parseInt(document.getElementById('reviewPageJump').value);
             const total = Math.ceil(allWords.length / reviewWordsPerPage) || 1;
@@ -771,79 +713,48 @@
             else alert('页码超出范围！');
         }
 
-        // ==================== 标记操作 ====================
-        async function markKnown(wordId) {
-            wordStatus[wordId] = 'known';
-            updateDisplay(); if (document.querySelector('.tab-content.active')?.id === 'review-tab') updateReviewDisplay();
-            updateStats(); await saveCurrentProgress();
-        }
-        async function markUnknown(wordId) {
-            wordStatus[wordId] = 'unknown';
-            updateDisplay(); if (document.querySelector('.tab-content.active')?.id === 'review-tab') updateReviewDisplay();
-            updateStats(); await saveCurrentProgress();
-        }
+        async function markKnown(wordId) { wordStatus[wordId] = 'known'; updateDisplay(); updateStats(); await saveCurrentProgress(); }
+        async function markUnknown(wordId) { wordStatus[wordId] = 'unknown'; updateDisplay(); updateStats(); await saveCurrentProgress(); }
 
         async function markPageAllKnown() {
-            const mode = document.getElementById('displayMode').value;
             let filtered = allWords;
-            if (mode === 'unknown') filtered = allWords.filter(w => wordStatus[w.id] !== 'known');
-            else if (mode === 'known') filtered = allWords.filter(w => wordStatus[w.id] === 'known');
-            const start = (currentPage - 1) * wordsPerPage;
-            const end = Math.min(start + wordsPerPage, filtered.length);
-            const pageWords = filtered.slice(start, end);
-            pageWords.forEach(w => wordStatus[w.id] = 'known');
-            updateDisplay(); if (document.querySelector('.tab-content.active')?.id === 'review-tab') updateReviewDisplay();
-            updateStats(); await saveCurrentProgress();
-        }
-
-        async function markPageRestKnown() {
             const mode = document.getElementById('displayMode').value;
-            let filtered = allWords;
             if (mode === 'unknown') filtered = allWords.filter(w => wordStatus[w.id] !== 'known');
-            else if (mode === 'known') filtered = allWords.filter(w => wordStatus[w.id] === 'known');
             const start = (currentPage - 1) * wordsPerPage;
-            const end = Math.min(start + wordsPerPage, filtered.length);
-            const pageWords = filtered.slice(start, end);
-            if (!pageWords.some(w => wordStatus[w.id] === 'unknown')) { alert('当前页面没有未掌握词汇！'); return; }
-            pageWords.forEach(w => { if (wordStatus[w.id] !== 'unknown') wordStatus[w.id] = 'known'; });
-            updateDisplay(); if (document.querySelector('.tab-content.active')?.id === 'review-tab') updateReviewDisplay();
-            updateStats(); await saveCurrentProgress();
-        }
-
-        async function resetPageStatus() {
-            const mode = document.getElementById('displayMode').value;
-            let filtered = allWords;
-            if (mode === 'unknown') filtered = allWords.filter(w => wordStatus[w.id] !== 'known');
-            else if (mode === 'known') filtered = allWords.filter(w => wordStatus[w.id] === 'known');
-            const start = (currentPage - 1) * wordsPerPage;
-            const end = Math.min(start + wordsPerPage, filtered.length);
-            const pageWords = filtered.slice(start, end);
-            pageWords.forEach(w => { if (wordStatus[w.id] !== null) delete wordStatus[w.id]; });
+            filtered.slice(start, start + wordsPerPage).forEach(w => wordStatus[w.id] = 'known');
             updateDisplay(); updateStats(); await saveCurrentProgress();
         }
-
+        async function markPageRestKnown() {
+            let filtered = allWords;
+            const mode = document.getElementById('displayMode').value;
+            if (mode === 'unknown') filtered = allWords.filter(w => wordStatus[w.id] !== 'known');
+            const page = filtered.slice((currentPage-1)*wordsPerPage, currentPage*wordsPerPage);
+            if (!page.some(w => wordStatus[w.id] === 'unknown')) return alert('当前页面没有未掌握词汇！');
+            page.forEach(w => { if (wordStatus[w.id] !== 'unknown') wordStatus[w.id] = 'known'; });
+            updateDisplay(); updateStats(); await saveCurrentProgress();
+        }
+        async function resetPageStatus() {
+            let filtered = allWords;
+            const mode = document.getElementById('displayMode').value;
+            if (mode === 'unknown') filtered = allWords.filter(w => wordStatus[w.id] !== 'known');
+            filtered.slice((currentPage-1)*wordsPerPage, currentPage*wordsPerPage).forEach(w => delete wordStatus[w.id]);
+            updateDisplay(); updateStats(); await saveCurrentProgress();
+        }
         async function markReviewPageAllKnown() {
-            const start = (currentReviewPage - 1) * reviewWordsPerPage;
-            const pageWords = allWords.slice(start, start + reviewWordsPerPage);
-            pageWords.forEach(w => wordStatus[w.id] = 'known');
+            allWords.slice((currentReviewPage-1)*reviewWordsPerPage, currentReviewPage*reviewWordsPerPage).forEach(w => wordStatus[w.id] = 'known');
             updateReviewDisplay(); updateStats(); await saveCurrentProgress();
         }
-
         async function markReviewPageRestKnown() {
-            const start = (currentReviewPage - 1) * reviewWordsPerPage;
-            const pageWords = allWords.slice(start, start + reviewWordsPerPage);
-            if (!pageWords.some(w => wordStatus[w.id] === 'unknown')) { alert('当前页面没有未掌握词汇！'); return; }
-            pageWords.forEach(w => { if (wordStatus[w.id] !== 'unknown') wordStatus[w.id] = 'known'; });
+            const page = allWords.slice((currentReviewPage-1)*reviewWordsPerPage, currentReviewPage*reviewWordsPerPage);
+            if (!page.some(w => wordStatus[w.id] === 'unknown')) return alert('当前页面没有未掌握词汇！');
+            page.forEach(w => { if (wordStatus[w.id] !== 'unknown') wordStatus[w.id] = 'known'; });
             updateReviewDisplay(); updateStats(); await saveCurrentProgress();
         }
 
         async function saveCurrentProgress() {
-            if (currentFileId && allWords.length > 0) {
-                await saveVocabularyToDB(currentFileId, allWords, wordStatus);
-            }
+            if (currentFileId && allWords.length > 0) await saveVocabularyToDB(currentFileId, allWords, wordStatus);
         }
 
-        // ==================== 统计 & 其他 ====================
         function updateStats() {
             const total = allWords.length;
             const known = Object.values(wordStatus).filter(s => s === 'known').length;
@@ -866,16 +777,10 @@
         function exportUnknown() {
             const unknownWords = allWords.filter(w => wordStatus[w.id] === 'unknown');
             if (!unknownWords.length) return alert('没有未掌握的词汇！');
-            let csvContent = "序号,中文,英文,分类\n";
-            unknownWords.forEach(w => {
-                const idx = allWords.findIndex(aw => aw.id === w.id) + 1;
-                csvContent += `${idx},"${w.chinese}","${w.english}","${w.category}"\n`;
-            });
-            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `未掌握词汇_${new Date().toISOString().slice(0,10)}.csv`;
-            a.click();
+            let csv = "序号,中文,英文,分类\n";
+            unknownWords.forEach(w => csv += `${allWords.findIndex(aw=>aw.id===w.id)+1},"${w.chinese}","${w.english}","${w.category}"\n`);
+            const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `未掌握词汇_${new Date().toISOString().slice(0,10)}.csv`; a.click();
         }
 
         function jumpToFirstUnknown() {
@@ -887,8 +792,7 @@
             setTimeout(() => {
                 const cards = document.querySelectorAll('.word-card');
                 const target = cards[idx % wordsPerPage];
-                if (target) { target.classList.add('current'); target.scrollIntoView({ behavior:'smooth', block:'center' });
-                    setTimeout(() => target.classList.remove('current'), 2000); }
+                if (target) { target.classList.add('current'); target.scrollIntoView({ behavior:'smooth', block:'center' }); setTimeout(() => target.classList.remove('current'), 2000); }
             }, 100);
         }
 
@@ -896,8 +800,8 @@
             if (!confirm('确定要清除所有文件的数据吗？此操作不可恢复！')) return;
             const files = await getFileList();
             for (const f of files) await deleteFileData(f.id);
-            currentFileId = null; allWords = []; wordStatus = {};
-            shownAnswers.clear(); currentPage = 1; currentReviewPage = 1;
+            currentFileId = null; allWords = []; wordStatus = {}; shownAnswers.clear();
+            currentPage = 1; currentReviewPage = 1;
             await refreshFileList(); updateDisplay(); updateStats(); updateReviewDisplay();
         }
 
@@ -905,23 +809,15 @@
             if (!currentFileId) return alert('请先选择一个文件');
             const currentFile = fileList.find(f => f.id === currentFileId);
             const data = { fileId: currentFileId, fileName: currentFile?.fileName, allWords, wordStatus, exportTime: new Date().toISOString() };
-            const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `${currentFile?.fileName || 'data'}_学习进度_${new Date().toISOString().slice(0,10)}.json`;
-            a.click();
+            const blob = new Blob([JSON.stringify(data)], {type:'application/json'});
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${currentFile?.fileName||'data'}_学习进度_${new Date().toISOString().slice(0,10)}.json`; a.click();
         }
 
         function importData() {
-            if (!currentFileId) {
-                if (confirm('当前未选择词库。要先创建一个空白词库吗？')) createNewVocabulary();
-                return;
-            }
-            const input = document.createElement('input');
-            input.type = 'file'; input.accept = '.json';
+            if (!currentFileId) return alert('请先选择或创建一个词库');
+            const input = document.createElement('input'); input.type = 'file'; input.accept = '.json';
             input.onchange = async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
+                const file = e.target.files[0]; if (!file) return;
                 const reader = new FileReader();
                 reader.onload = async (ev) => {
                     try {
@@ -931,8 +827,8 @@
                         currentPage = 1; currentReviewPage = 1;
                         await saveVocabularyToDB(currentFileId, allWords, wordStatus);
                         updateDisplay(); updateStats(); updateReviewDisplay(); await refreshFileList();
-                        alert('学习进度导入成功！');
-                    } catch (err) { alert('导入失败：' + err.message); }
+                        alert('导入成功！');
+                    } catch(err) { alert('导入失败：'+err.message); }
                 };
                 reader.readAsText(file);
             };
@@ -955,13 +851,11 @@
             }
         }
 
-        // 触摸滑动
         function initTouchEvents() {
-            const wc = document.getElementById('wordContainer');
-            const rwc = document.getElementById('reviewWordContainer');
-            const hStart = (e) => { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; };
-            const hMove = (e) => { if (!enableSwipe) return; if (Math.abs(e.touches[0].clientY - touchStartY) < Math.abs(e.touches[0].clientX - touchStartX)) e.preventDefault(); };
-            const hEnd = (e) => {
+            const wc = document.getElementById('wordContainer'), rwc = document.getElementById('reviewWordContainer');
+            const hStart = e => { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; };
+            const hMove = e => { if (!enableSwipe) return; if (Math.abs(e.touches[0].clientY - touchStartY) < Math.abs(e.touches[0].clientX - touchStartX)) e.preventDefault(); };
+            const hEnd = e => {
                 if (!enableSwipe) return;
                 touchEndX = e.changedTouches[0].clientX; touchEndY = e.changedTouches[0].clientY;
                 const dx = touchEndX - touchStartX, dy = Math.abs(touchEndY - touchStartY);
@@ -983,88 +877,59 @@
             enableSwipe = document.getElementById('enableSwipe').checked;
             localStorage.setItem('autoScrollToFirst', String(autoScrollToFirst));
             localStorage.setItem('enableSwipe', String(enableSwipe));
-            updateDisplay(); updateReviewDisplay();
-            alert('设置已保存！');
+            updateDisplay(); updateReviewDisplay(); alert('设置已保存！');
         }
         function toggleAutoScroll() { autoScrollToFirst = document.getElementById('autoScrollToFirst').checked; localStorage.setItem('autoScrollToFirst', String(autoScrollToFirst)); }
         function toggleSwipe() { enableSwipe = document.getElementById('enableSwipe').checked; localStorage.setItem('enableSwipe', String(enableSwipe)); }
 
-        // ==================== 云端 GitHub 词库检查与导入 ====================
+        // ==================== GitHub 云端词库功能 ====================
         async function checkUpdates() {
-            const updateStatus = document.getElementById('updateStatus');
-            const updateListDiv = document.getElementById('updateList');
-            updateStatus.textContent = '正在检查...';
-            updateListDiv.style.display = 'none';
-            updateListDiv.innerHTML = '';
-
+            const status = document.getElementById('updateStatus'), listDiv = document.getElementById('updateList');
+            status.textContent = '正在检查...'; listDiv.style.display = 'none'; listDiv.innerHTML = '';
             const token = getGitHubToken();
             const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-
             try {
                 const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${FOLDER_PATH}`;
                 const resp = await fetch(url, { headers });
-                if (!resp.ok) throw new Error('无法访问文件夹，请确认仓库公开或登录');
+                if (!resp.ok) throw new Error('无法访问文件夹，请确保仓库公开或已登录');
                 const files = await resp.json();
                 const xlsxFiles = files.filter(f => f.name.endsWith('.xlsx'));
-                if (xlsxFiles.length === 0) {
-                    updateStatus.textContent = '云端暂无 xlsx 文件';
-                    return;
-                }
-                const newOrUpdated = xlsxFiles.filter(f => {
-                    const existing = importedFiles[f.name];
-                    return !existing || existing.sha !== f.sha;
-                });
-                if (newOrUpdated.length === 0) {
-                    updateStatus.textContent = '所有词库已是最新 ✨';
-                    return;
-                }
-                updateStatus.textContent = `发现 ${newOrUpdated.length} 个可更新/新词库`;
+                if (xlsxFiles.length === 0) { status.textContent = '云端暂无 xlsx 文件'; return; }
+                const newOrUpdated = xlsxFiles.filter(f => !importedFiles[f.name] || importedFiles[f.name].sha !== f.sha);
+                if (newOrUpdated.length === 0) { status.textContent = '所有词库已是最新 ✨'; return; }
+                status.textContent = `发现 ${newOrUpdated.length} 个可更新/新词库`;
                 let html = '';
                 newOrUpdated.forEach(f => {
-                    const status = importedFiles[f.name] ? '(更新)' : '(新)';
-                    html += `<div>
-                        <span>📄 ${f.name} ${status}</span>
-                        <button class="btn btn-info" onclick="importGitHubFile('${f.download_url}', '${f.name}', '${f.sha}')">导入</button>
-                    </div>`;
+                    const tag = importedFiles[f.name] ? '(更新)' : '(新)';
+                    html += `<div><span>📄 ${f.name} ${tag}</span><button class="btn btn-info" onclick="importGitHubFile('${f.download_url}','${f.name}','${f.sha}')">导入</button></div>`;
                 });
-                updateListDiv.innerHTML = html;
-                updateListDiv.style.display = 'block';
-            } catch (err) {
-                updateStatus.textContent = '检查失败：' + err.message;
-            }
+                listDiv.innerHTML = html; listDiv.style.display = 'block';
+            } catch (err) { status.textContent = '检查失败：' + err.message; }
         }
 
         async function importGitHubFile(downloadUrl, fileName, sha) {
-            if (!currentFileId) {
-                alert('请先在左侧选择或创建一个词库！');
-                return;
-            }
-            const updateStatus = document.getElementById('updateStatus');
+            if (!currentFileId) return alert('请先在左侧选择或创建一个词库！');
+            const status = document.getElementById('updateStatus');
             try {
-                updateStatus.textContent = `正在导入 ${fileName} ...`;
+                status.textContent = `正在导入 ${fileName} ...`;
                 const resp = await fetch(downloadUrl);
                 if (!resp.ok) throw new Error('下载失败');
-                const arrayBuffer = await resp.arrayBuffer();
-                const data = new Uint8Array(arrayBuffer);
+                const buffer = await resp.arrayBuffer();
+                const data = new Uint8Array(buffer);
                 const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-                // 使用当前 fileId 导入
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
                 await processExcelData(jsonData, currentFileId, fileName);
                 importedFiles[fileName] = { sha, time: new Date().toISOString() };
                 saveImportedFiles();
                 await refreshFileList();
-                updateStatus.textContent = `✅ "${fileName}" 导入成功！`;
+                status.textContent = `✅ "${fileName}" 导入成功！`;
                 document.getElementById('updateList').style.display = 'none';
-            } catch (err) {
-                updateStatus.textContent = '导入失败：' + err.message;
-            }
+            } catch (err) { status.textContent = '导入失败：' + err.message; }
         }
 
-        // 监听本地文件上传
         document.getElementById('fileInput').addEventListener('change', async function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+            const file = e.target.files[0]; if (!file) return;
             document.getElementById('fileName').textContent = file.name;
             try {
                 const fileId = await saveFileInfo(file.name);
@@ -1072,24 +937,18 @@
                 const ext = file.name.split('.').pop().toLowerCase();
                 if (ext === 'csv') {
                     const reader = new FileReader();
-                    reader.onload = async (ev) => {
-                        await processCSVData(ev.target.result, fileId, file.name);
-                        await refreshFileList();
-                        document.getElementById('fileSelector').value = fileId;
-                        alert(`文件 "${file.name}" 导入成功！共 ${allWords.length} 个词汇`);
-                    };
+                    reader.onload = async ev => { await processCSVData(ev.target.result, fileId, file.name); await refreshFileList(); document.getElementById('fileSelector').value = fileId; alert(`导入成功！共 ${allWords.length} 个词汇`); };
                     reader.readAsText(file, 'UTF-8');
                 } else {
                     const reader = new FileReader();
-                    reader.onload = async (ev) => {
+                    reader.onload = async ev => {
                         const data = new Uint8Array(ev.target.result);
                         const workbook = XLSX.read(data, { type: 'array' });
-                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
                         await processExcelData(jsonData, fileId, file.name);
-                        await refreshFileList();
-                        document.getElementById('fileSelector').value = fileId;
-                        alert(`文件 "${file.name}" 导入成功！共 ${allWords.length} 个词汇`);
+                        await refreshFileList(); document.getElementById('fileSelector').value = fileId;
+                        alert(`导入成功！共 ${allWords.length} 个词汇`);
                     };
                     reader.readAsArrayBuffer(file);
                 }
@@ -1097,60 +956,34 @@
             this.value = '';
         });
 
-        // ==================== 启动加载 ====================
         window.onload = async function() {
-            try {
-                if (!window.indexedDB) alert('浏览器不支持IndexedDB，请使用Chrome、Edge或Firefox');
-                if (window.indexedDB) {
-                    await initIndexedDB();
-                    // 迁移旧数据（略）
-                }
-                const savedWordsPerPage = localStorage.getItem('defaultWordsPerPage');
-                if (savedWordsPerPage) {
-                    document.getElementById('defaultWordsPerPage').value = savedWordsPerPage;
-                    document.getElementById('wordsPerPage').value = savedWordsPerPage;
-                    document.getElementById('reviewWordsPerPage').value = savedWordsPerPage;
-                    wordsPerPage = parseInt(savedWordsPerPage) || 10;
-                    reviewWordsPerPage = parseInt(savedWordsPerPage) || 10;
-                }
-                const savedAuto = localStorage.getItem('autoScrollToFirst');
-                if (savedAuto !== null) {
-                    autoScrollToFirst = savedAuto === 'true';
-                    document.getElementById('autoScrollToFirst').checked = autoScrollToFirst;
-                }
-                const savedSwipe = localStorage.getItem('enableSwipe');
-                if (savedSwipe !== null) {
-                    enableSwipe = savedSwipe === 'true';
-                    document.getElementById('enableSwipe').checked = enableSwipe;
-                }
-                initTouchEvents();
-                if (window.indexedDB && db) {
-                    await refreshFileList();
-                    const hasData = await loadWordsFromStorage();
-                    if (!hasData) { allWords = []; wordStatus = {}; updateDisplay(); updateStats(); }
-                } else {
-                    allWords = []; wordStatus = {}; updateDisplay(); updateStats();
-                }
-                updateUserUI(auth.currentUser);
-            } catch (err) {
-                console.error(err);
-                allWords = []; wordStatus = {}; updateDisplay(); updateStats();
+            if (!window.indexedDB) alert('您的浏览器不支持IndexedDB，请使用Chrome、Edge或Firefox');
+            if (window.indexedDB) { await initIndexedDB(); }
+            const savedWords = localStorage.getItem('defaultWordsPerPage');
+            if (savedWords) {
+                document.getElementById('defaultWordsPerPage').value = savedWords;
+                document.getElementById('wordsPerPage').value = savedWords;
+                document.getElementById('reviewWordsPerPage').value = savedWords;
+                wordsPerPage = parseInt(savedWords) || 10;
+                reviewWordsPerPage = parseInt(savedWords) || 10;
             }
+            autoScrollToFirst = localStorage.getItem('autoScrollToFirst') === 'true';
+            document.getElementById('autoScrollToFirst').checked = autoScrollToFirst;
+            enableSwipe = localStorage.getItem('enableSwipe') === 'true';
+            document.getElementById('enableSwipe').checked = enableSwipe;
+            initTouchEvents();
+            if (db) { await refreshFileList(); const has = await loadWordsFromStorage(); if (!has) { allWords = []; wordStatus = {}; updateDisplay(); updateStats(); } }
+            else { allWords = []; wordStatus = {}; updateDisplay(); updateStats(); }
+            updateUserUI(auth.currentUser);
         };
 
         async function loadWordsFromStorage() {
             fileList = await getFileList();
-            if (fileList.length > 0) {
-                const first = fileList[0];
-                currentFileId = first.id;
+            if (fileList.length) {
+                const first = fileList[0]; currentFileId = first.id;
                 const data = await loadVocabularyFromFile(currentFileId);
-                allWords = data.words; wordStatus = data.status;
-                shownAnswers.clear();
-                if (allWords.length > 0) {
-                    currentPage = 1; currentReviewPage = 1;
-                    updateDisplay(); updateStats(); await refreshFileList();
-                    return true;
-                }
+                allWords = data.words; wordStatus = data.status; shownAnswers.clear();
+                if (allWords.length) { currentPage = 1; currentReviewPage = 1; updateDisplay(); updateStats(); await refreshFileList(); return true; }
             }
             return false;
         }
