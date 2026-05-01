@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>医学词汇背词工具</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -29,14 +32,19 @@
             display: flex; align-items: center; gap: 15px;
             margin-bottom: 15px; flex-wrap: wrap;
         }
-        .swipe-hint { font-size: 12px; color: #6c757d; margin-left: 10px; display: none; }
+        .swipe-hint {
+            font-size: 12px; color: #6c757d; margin-left: 10px;
+            display: none;
+        }
         @media (max-width: 768px) { .swipe-hint { display: inline-block; } }
         .control-group label { font-weight: 600; color: #495057; min-width: 80px; }
         .control-group input, .control-group select {
             padding: 8px 12px; border: 2px solid #dee2e6;
             border-radius: 8px; font-size: 14px; transition: border-color 0.3s;
         }
-        .control-group input:focus, .control-group select:focus { outline: none; border-color: #667eea; }
+        .control-group input:focus, .control-group select:focus {
+            outline: none; border-color: #667eea;
+        }
         .btn {
             padding: 10px 20px; border: none; border-radius: 8px;
             font-size: 14px; font-weight: 600; cursor: pointer;
@@ -115,21 +123,11 @@
             .control-group label { min-width: auto; }
         }
         #updateList {
-            padding: 10px; background: #f1f1f1; border-radius: 8px;
-            display: none; margin-bottom: 10px;
+            padding:10px; background:#f1f1f1; border-radius:8px; display:none; margin-bottom:10px;
         }
         #updateList div {
             display: flex; justify-content: space-between; align-items: center;
-            margin: 5px 0; background: white; padding: 8px; border-radius: 6px;
-        }
-        .modal {
-            display: none; position: fixed; top: 0; left: 0;
-            width: 100%; height: 100%; background: rgba(0,0,0,0.5);
-            z-index: 999; justify-content: center; align-items: center;
-        }
-        .modal-content {
-            background: white; padding: 30px; border-radius: 10px;
-            min-width: 320px;
+            margin:5px 0; background:white; padding:8px; border-radius:6px;
         }
     </style>
 </head>
@@ -139,6 +137,7 @@
             <h1>📚 医学词汇背词工具</h1>
             <p id="userStatus">正在加载...</p>
         </div>
+
         <div class="controls">
             <div class="tabs">
                 <div class="tab active" onclick="switchTab('learning')">学习模式</div>
@@ -157,17 +156,20 @@
                     <button class="btn btn-info" onclick="createNewVocabulary()">+ 新建空白词库</button>
                     <button class="btn btn-danger" onclick="deleteCurrentFile()">删除当前文件</button>
                 </div>
+
                 <div class="control-group">
                     <label for="fileInput" class="file-label">📁 导入Excel文件</label>
                     <input type="file" id="fileInput" class="file-input" accept=".xlsx,.xls">
                     <span id="fileName" style="color: #6c757d; font-size: 14px;">未选择文件</span>
                 </div>
+
                 <div class="control-group">
                     <label>云端词库更新:</label>
                     <button class="btn btn-success" onclick="checkUpdates()">🔍 检查更新</button>
                     <span id="updateStatus" style="font-size:14px; color:#6c757d;"></span>
                 </div>
                 <div id="updateList"></div>
+
                 <div class="control-group">
                     <label>每页显示:</label>
                     <input type="number" id="wordsPerPage" value="10" min="1" max="50">
@@ -175,6 +177,7 @@
                     <button class="btn btn-danger" onclick="resetProgress()">重置进度</button>
                     <span class="swipe-hint">💡 提示：可以左右滑动翻页</span>
                 </div>
+
                 <div class="control-group">
                     <label>显示模式:</label>
                     <select id="displayMode" onchange="updateDisplay()">
@@ -186,13 +189,16 @@
                     <button class="btn btn-warning" onclick="jumpToFirstUnknown()">跳转到第一个未标记</button>
                 </div>
             </div>
+
             <div class="stats" id="stats">
                 <div class="stat-item"><h4 id="totalCount">0</h4><p>总词汇</p></div>
                 <div class="stat-item"><h4 id="knownCount">0</h4><p>已掌握</p></div>
                 <div class="stat-item"><h4 id="unknownCount">0</h4><p>未掌握</p></div>
                 <div class="stat-item"><h4 id="progressPercent">0%</h4><p>掌握率</p></div>
             </div>
+
             <div id="wordContainer" class="word-grid"></div>
+
             <div class="pagination" id="pagination">
                 <button class="btn btn-primary" onclick="previousPage()">上一页</button>
                 <span class="page-info" id="pageInfo">第 1 页</span>
@@ -262,50 +268,30 @@
                     <button class="btn btn-success" onclick="exportData()">导出学习进度</button>
                     <button class="btn btn-primary" onclick="importData()">导入学习进度</button>
                 </div>
-                <div class="control-group">
-                    <label>GitHub 令牌 (可选):</label>
-                    <input type="password" id="githubTokenInput" placeholder="留空则使用公共限额" style="width:250px;">
-                    <button class="btn btn-info" onclick="saveGitHubToken()">保存</button>
-                    <span style="font-size:12px; color:#6c757d;">用于提高词库更新 API 限额</span>
-                </div>
-                <div class="control-group">
-                    <label>Gitee 令牌 (可选):</label>
-                    <input type="password" id="giteeTokenInput" placeholder="用于提高词库更新 API 限额" style="width:250px;">
-                    <button class="btn btn-info" onclick="saveGiteeToken()">保存</button>
-                    <span style="font-size:12px; color:#6c757d;">（目前未使用）</span>
-                </div>
             </div>
-        </div>
-    </div>
-
-    <!-- 登录弹窗 -->
-    <div id="loginModal" class="modal">
-        <div class="modal-content">
-            <h3>🔑 使用 Gitee 账号登录</h3>
-            <p style="font-size:14px; color:#666; margin-bottom:10px;">
-                需要创建<a href="https://gitee.com/profile/personal_access_tokens" target="_blank">私人令牌</a>，权限勾选 <b>user_info</b>
-            </p>
-            <input type="text" id="giteeUsername" placeholder="Gitee 用户名" style="width:100%; padding:8px; margin:5px 0;"><br>
-            <input type="password" id="giteeToken" placeholder="私人令牌" style="width:100%; padding:8px; margin:5px 0;"><br>
-            <button class="btn btn-primary" onclick="giteeLogin()">登录</button>
-            <button class="btn btn-danger" onclick="closeLoginModal()" style="margin-left:5px;">取消</button>
-            <p id="loginError" style="color:red; font-size:14px; margin-top:5px;"></p>
         </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
-        // ==================== 配置 ====================
+        // ==================== Firebase 初始化（已配置） ====================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAlWOvCtWCUbW4w5LHIIKjhl-PwpomF_DY",
+            authDomain: "words-908e4.firebaseapp.com",
+            projectId: "words-908e4",
+            storageBucket: "words-908e4.firebasestorage.app",
+            messagingSenderId: "722882308350",
+            appId: "1:722882308350:web:1e71e939ac3d6d5206ddaf"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
+        // ==================== GitHub 配置 ====================
         const GITHUB_OWNER = 'yyyaaa-maker';
         const GITHUB_REPO = 'word-memorization-assistant';
         const FOLDER_PATH = 'wordlists';
 
-        // 已导入文件记录
-        let importedFiles = {};
-        try { importedFiles = JSON.parse(localStorage.getItem('importedFiles') || '{}'); } catch(e) {}
-        function saveImportedFiles() { localStorage.setItem('importedFiles', JSON.stringify(importedFiles)); }
-
-        // ==================== 全局变量 ====================
+        // ==================== 原有全局变量 ====================
         let db = null;
         let allWords = [];
         let currentPage = 1;
@@ -321,103 +307,43 @@
         let autoScrollToFirst = false, enableSwipe = false;
         let currentFileId = null, fileList = [];
 
-        // ==================== Gitee 登录 ====================
-        function showLoginModal() {
-            document.getElementById('loginModal').style.display = 'flex';
-        }
-        function closeLoginModal() {
-            document.getElementById('loginModal').style.display = 'none';
-            document.getElementById('loginError').textContent = '';
+        let importedFiles = {};
+        try { importedFiles = JSON.parse(localStorage.getItem('importedFiles') || '{}'); } catch(e) {}
+        function saveImportedFiles() { localStorage.setItem('importedFiles', JSON.stringify(importedFiles)); }
+
+        // ==================== 用户登录/UI ====================
+        function updateUserUI(user) {
+            const statusEl = document.getElementById('userStatus');
+            if (user) {
+                statusEl.innerHTML = `已登录：${user.displayName || user.email} | <a href="#" onclick="logout()" style="color:white;">退出</a>`;
+            } else {
+                statusEl.innerHTML = `未登录 | <a href="#" onclick="loginWithGitHub()" style="color:white;">使用 GitHub 登录</a>`;
+            }
         }
 
-        async function giteeLogin() {
-            const username = document.getElementById('giteeUsername').value.trim();
-            const token = document.getElementById('giteeToken').value.trim();
-            if (!username || !token) {
-                document.getElementById('loginError').textContent = '用户名和令牌不能为空';
-                return;
-            }
-            // 验证有效性
-            try {
-                const resp = await fetch('https://gitee.com/api/v5/user', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (!resp.ok) throw new Error('令牌无效');
-                const user = await resp.json();
-                if (user.login !== username) {
-                    document.getElementById('loginError').textContent = '用户名与令牌不匹配';
-                    return;
-                }
-                // 保存登录信息
-                localStorage.setItem('gitee_user', JSON.stringify({ username, token }));
-                updateUserUI(user);
-                closeLoginModal();
-                document.getElementById('giteeUsername').value = '';
-                document.getElementById('giteeToken').value = '';
-            } catch (err) {
-                document.getElementById('loginError').textContent = '登录失败：' + err.message;
-            }
+        auth.onAuthStateChanged(user => {
+            updateUserUI(user);
+            if (!user) localStorage.removeItem('githubToken');
+        });
+
+        function loginWithGitHub() {
+            const provider = new firebase.auth.GithubAuthProvider();
+            auth.signInWithPopup(provider).then(result => {
+                const credential = result.credential;
+                if (credential) localStorage.setItem('githubToken', credential.accessToken);
+                updateUserUI(result.user);
+            }).catch(error => alert('登录失败：' + error.message));
         }
 
         function logout() {
-            localStorage.removeItem('gitee_user');
+            auth.signOut();
+            localStorage.removeItem('githubToken');
             updateUserUI(null);
         }
 
-        function getSavedUser() {
-            const saved = localStorage.getItem('gitee_user');
-            return saved ? JSON.parse(saved) : null;
-        }
+        function getGitHubToken() { return localStorage.getItem('githubToken'); }
 
-        async function autoLogin() {
-            const saved = getSavedUser();
-            if (!saved) return updateUserUI(null);
-            try {
-                const resp = await fetch('https://gitee.com/api/v5/user', {
-                    headers: { 'Authorization': `Bearer ${saved.token}` }
-                });
-                if (resp.ok) {
-                    const user = await resp.json();
-                    updateUserUI(user);
-                } else {
-                    // 令牌失效，清除
-                    localStorage.removeItem('gitee_user');
-                    updateUserUI(null);
-                }
-            } catch (e) {
-                updateUserUI(null);
-            }
-        }
-
-        function updateUserUI(user) {
-            const el = document.getElementById('userStatus');
-            if (user) {
-                el.innerHTML = `已登录：${user.login} | <a href="#" onclick="logout()" style="color:white;">退出</a>`;
-            } else {
-                el.innerHTML = `未登录 | <a href="#" onclick="showLoginModal()" style="color:white;">使用 Gitee 账号登录</a>`;
-            }
-        }
-
-        // 获取 GitHub Token（用户可选设置）
-        function getGitHubToken() {
-            return localStorage.getItem('github_token') || '';
-        }
-        function saveGitHubToken() {
-            const token = document.getElementById('githubTokenInput').value.trim();
-            if (token) {
-                localStorage.setItem('github_token', token);
-                alert('GitHub 令牌已保存');
-            } else {
-                localStorage.removeItem('github_token');
-                alert('已清除 GitHub 令牌');
-            }
-        }
-        function saveGiteeToken() {
-            // 暂时未用，仅作预留
-            alert('Gitee 令牌功能暂时未使用');
-        }
-
-        // ==================== IndexedDB (完全保留) ====================
+        // ==================== IndexedDB 全部保留 ====================
         function initIndexedDB() {
             return new Promise((resolve, reject) => {
                 const DB_NAME = 'MedicalVocabDB', DB_VERSION = 7;
@@ -922,13 +848,9 @@
             } else if (tabName === 'settings') {
                 document.querySelector('.tab:nth-child(3)').classList.add('active');
                 document.getElementById('settings-tab').classList.add('active');
-                // 回填已保存的 GitHub 令牌
-                const savedToken = localStorage.getItem('github_token') || '';
-                document.getElementById('githubTokenInput').value = savedToken;
             }
         }
 
-        // 触摸滑动
         function initTouchEvents() {
             const wc = document.getElementById('wordContainer'), rwc = document.getElementById('reviewWordContainer');
             const hStart = e => { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; };
@@ -960,17 +882,16 @@
         function toggleAutoScroll() { autoScrollToFirst = document.getElementById('autoScrollToFirst').checked; localStorage.setItem('autoScrollToFirst', String(autoScrollToFirst)); }
         function toggleSwipe() { enableSwipe = document.getElementById('enableSwipe').checked; localStorage.setItem('enableSwipe', String(enableSwipe)); }
 
-        // ==================== GitHub 词库更新 ====================
+        // ==================== GitHub 云端词库功能 ====================
         async function checkUpdates() {
             const status = document.getElementById('updateStatus'), listDiv = document.getElementById('updateList');
             status.textContent = '正在检查...'; listDiv.style.display = 'none'; listDiv.innerHTML = '';
-            // 优先使用用户保存的 GitHub 令牌，否则无认证
             const token = getGitHubToken();
             const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
             try {
                 const url = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${FOLDER_PATH}`;
                 const resp = await fetch(url, { headers });
-                if (!resp.ok) throw new Error('无法访问文件夹，请确保仓库公开');
+                if (!resp.ok) throw new Error('无法访问文件夹，请确保仓库公开或已登录');
                 const files = await resp.json();
                 const xlsxFiles = files.filter(f => f.name.endsWith('.xlsx'));
                 if (xlsxFiles.length === 0) { status.textContent = '云端暂无 xlsx 文件'; return; }
@@ -1037,7 +958,7 @@
 
         window.onload = async function() {
             if (!window.indexedDB) alert('您的浏览器不支持IndexedDB，请使用Chrome、Edge或Firefox');
-            if (window.indexedDB) await initIndexedDB();
+            if (window.indexedDB) { await initIndexedDB(); }
             const savedWords = localStorage.getItem('defaultWordsPerPage');
             if (savedWords) {
                 document.getElementById('defaultWordsPerPage').value = savedWords;
@@ -1053,10 +974,7 @@
             initTouchEvents();
             if (db) { await refreshFileList(); const has = await loadWordsFromStorage(); if (!has) { allWords = []; wordStatus = {}; updateDisplay(); updateStats(); } }
             else { allWords = []; wordStatus = {}; updateDisplay(); updateStats(); }
-            // 自动登录
-            autoLogin();
-            // 回填 GitHub 令牌输入框
-            document.getElementById('githubTokenInput').value = localStorage.getItem('github_token') || '';
+            updateUserUI(auth.currentUser);
         };
 
         async function loadWordsFromStorage() {
